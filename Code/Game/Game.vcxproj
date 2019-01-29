@@ -131,6 +131,7 @@
     <IntDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</IntDir>
     <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
     <CustomBuildBeforeTargets>PreBuildEvent</CustomBuildBeforeTargets>
+    <IncludePath>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugInline|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -138,6 +139,7 @@
     <IntDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</IntDir>
     <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
     <CustomBuildBeforeTargets>PreBuildEvent</CustomBuildBeforeTargets>
+    <IncludePath>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -145,6 +147,7 @@
     <IntDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</IntDir>
     <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
     <CustomBuildBeforeTargets>PreBuildEvent</CustomBuildBeforeTargets>
+    <IncludePath>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugInline|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -152,30 +155,35 @@
     <IntDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</IntDir>
     <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
     <CustomBuildBeforeTargets>PreBuildEvent</CustomBuildBeforeTargets>
+    <IncludePath>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</IntDir>
     <CustomBuildBeforeTargets>PreBuildEvent</CustomBuildBeforeTargets>
+    <IncludePath>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</IntDir>
     <CustomBuildBeforeTargets>PreBuildEvent</CustomBuildBeforeTargets>
+    <IncludePath>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</IntDir>
     <CustomBuildBeforeTargets>PreBuildEvent</CustomBuildBeforeTargets>
+    <IncludePath>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FaskBreak|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</IntDir>
     <CustomBuildBeforeTargets>PreBuildEvent</CustomBuildBeforeTargets>
+    <IncludePath>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -230,6 +238,15 @@ exit/B %errlev%</Command>
     <CustomBuild>
       <TreatOutputAsContent>true</TreatOutputAsContent>
     </CustomBuild>
+    <FxCompile>
+      <AllResourcesBound>true</AllResourcesBound>
+      <EnableUnboundedDescriptorTables>false</EnableUnboundedDescriptorTables>
+      <ShaderModel>6.1</ShaderModel>
+      <VariableName>g%(Filename)</VariableName>
+      <HeaderFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include\%(RelativeDir)\%(Filename).h</HeaderFileOutput>
+      <ObjectFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\bin\%(RelativeDir)\%(Filename).cso</ObjectFileOutput>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\Engine\Code\Engine\Renderer\Shader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugInline|Win32'">
     <ClCompile>
@@ -284,6 +301,15 @@ exit/B %errlev%</Command>
     <CustomBuild>
       <TreatOutputAsContent>true</TreatOutputAsContent>
     </CustomBuild>
+    <FxCompile>
+      <AllResourcesBound>true</AllResourcesBound>
+      <EnableUnboundedDescriptorTables>false</EnableUnboundedDescriptorTables>
+      <ShaderModel>6.1</ShaderModel>
+      <VariableName>g%(Filename)</VariableName>
+      <HeaderFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include\%(RelativeDir)\%(Filename).h</HeaderFileOutput>
+      <ObjectFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\bin\%(RelativeDir)\%(Filename).cso</ObjectFileOutput>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\Engine\Code\Engine\Renderer\Shader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -336,6 +362,15 @@ exit/B %errlev%</Command>
     <CustomBuild>
       <TreatOutputAsContent>true</TreatOutputAsContent>
     </CustomBuild>
+    <FxCompile>
+      <ShaderModel>6.1</ShaderModel>
+      <AllResourcesBound>true</AllResourcesBound>
+      <EnableUnboundedDescriptorTables>false</EnableUnboundedDescriptorTables>
+      <VariableName>g%(Filename)</VariableName>
+      <HeaderFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include\%(RelativeDir)\%(Filename).h</HeaderFileOutput>
+      <ObjectFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\bin\%(RelativeDir)\%(Filename).cso</ObjectFileOutput>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\Engine\Code\Engine\Renderer\Shader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugInline|x64'">
     <ClCompile>
@@ -390,6 +425,15 @@ exit/B %errlev%</Command>
     <CustomBuild>
       <TreatOutputAsContent>true</TreatOutputAsContent>
     </CustomBuild>
+    <FxCompile>
+      <ShaderModel>6.1</ShaderModel>
+      <AllResourcesBound>true</AllResourcesBound>
+      <EnableUnboundedDescriptorTables>false</EnableUnboundedDescriptorTables>
+      <VariableName>g%(Filename)</VariableName>
+      <HeaderFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include\%(RelativeDir)\%(Filename).h</HeaderFileOutput>
+      <ObjectFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\bin\%(RelativeDir)\%(Filename).cso</ObjectFileOutput>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\Engine\Code\Engine\Renderer\Shader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -445,6 +489,15 @@ exit/B %errlev%</Command>
     <CustomBuild>
       <TreatOutputAsContent>true</TreatOutputAsContent>
     </CustomBuild>
+    <FxCompile>
+      <AllResourcesBound>true</AllResourcesBound>
+      <EnableUnboundedDescriptorTables>false</EnableUnboundedDescriptorTables>
+      <ShaderModel>6.1</ShaderModel>
+      <VariableName>g%(Filename)</VariableName>
+      <HeaderFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include\%(RelativeDir)\%(Filename).h</HeaderFileOutput>
+      <ObjectFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\bin\%(RelativeDir)\%(Filename).cso</ObjectFileOutput>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\Engine\Code\Engine\Renderer\Shader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'">
     <ClCompile>
@@ -500,6 +553,15 @@ exit/B %errlev%</Command>
     <CustomBuild>
       <TreatOutputAsContent>true</TreatOutputAsContent>
     </CustomBuild>
+    <FxCompile>
+      <AllResourcesBound>true</AllResourcesBound>
+      <EnableUnboundedDescriptorTables>false</EnableUnboundedDescriptorTables>
+      <ShaderModel>6.1</ShaderModel>
+      <VariableName>g%(Filename)</VariableName>
+      <HeaderFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include\%(RelativeDir)\%(Filename).h</HeaderFileOutput>
+      <ObjectFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\bin\%(RelativeDir)\%(Filename).cso</ObjectFileOutput>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\Engine\Code\Engine\Renderer\Shader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -555,6 +617,15 @@ exit/B %errlev%</Command>
     <CustomBuild>
       <TreatOutputAsContent>true</TreatOutputAsContent>
     </CustomBuild>
+    <FxCompile>
+      <ShaderModel>6.1</ShaderModel>
+      <AllResourcesBound>true</AllResourcesBound>
+      <EnableUnboundedDescriptorTables>false</EnableUnboundedDescriptorTables>
+      <VariableName>g%(Filename)</VariableName>
+      <HeaderFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include\%(RelativeDir)\%(Filename).h</HeaderFileOutput>
+      <ObjectFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\bin\%(RelativeDir)\%(Filename).cso</ObjectFileOutput>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\Engine\Code\Engine\Renderer\Shader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FaskBreak|x64'">
     <ClCompile>
@@ -610,11 +681,21 @@ exit/B %errlev%</Command>
     <CustomBuild>
       <TreatOutputAsContent>true</TreatOutputAsContent>
     </CustomBuild>
+    <FxCompile>
+      <ShaderModel>6.1</ShaderModel>
+      <AllResourcesBound>true</AllResourcesBound>
+      <EnableUnboundedDescriptorTables>false</EnableUnboundedDescriptorTables>
+      <VariableName>g%(Filename)</VariableName>
+      <HeaderFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include\%(RelativeDir)\%(Filename).h</HeaderFileOutput>
+      <ObjectFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\bin\%(RelativeDir)\%(Filename).cso</ObjectFileOutput>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\Engine\Code\Engine\Renderer\Shader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CameraController.cpp" />
     <ClCompile Include="GameCommon.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="VoxelRenderer\VoxelRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\Engine\Code\Engine\Engine.vcxproj">
@@ -628,45 +709,54 @@ exit/B %errlev%</Command>
     <ClInclude Include="CameraController.hpp" />
     <ClInclude Include="EngineBuildPreferences.hpp" />
     <ClInclude Include="GameCommon.hpp" />
+    <ClInclude Include="VoxelRenderer\VoxelRenderer.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="shaders.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
+    <None Include="VoxelRenderer\Common.hlsli" />
+    <None Include="VoxelRenderer\DeferredShading.hlsli" />
+    <None Include="VoxelRenderer\GenGBuffer.hlsli" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="ssao.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="a.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="b.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="compute.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='DebugInline|x64'">4.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|Win32'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='DebugInline|Win32'">4.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'">4.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='FaskBreak|x64'">4.0</ShaderModel>
-      <FileType>Document</FileType>
-    </CustomBuild>
+    <FxCompile Include="VoxelRenderer\DeferredShading_ps.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="VoxelRenderer\DeferredShading_vs.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    </FxCompile>
+    <FxCompile Include="VoxelRenderer\GenGBuffer_ps.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="VoxelRenderer\GenGBuffer_vs.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

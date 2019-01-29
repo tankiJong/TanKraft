@@ -1,0 +1,13 @@
+name: material/couch
+properties:
+  cSpecBlock: {             # this is a property block
+    [SPECULAR_AMOUNT, float]: 3, # same as defining property
+    [SPECULAR_POWER, float]: [10], 
+  }
+
+  # for texture, [0] is texture type, [1] is path/id, [2] is POINT|LINEAR|.. and I don't even need "" for the path string lol
+  gTexDiffuse: [0, /image/couch/couch_diffuse.png, LINEAR]
+  gTexNormal: [1, /image/couch/couch_normal.png, LINEAR]
+
+shader:
+  name: shader/default_lit
