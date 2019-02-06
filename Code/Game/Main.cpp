@@ -20,6 +20,8 @@
 #include "Engine/Debug/Draw.hpp"
 #include "Game/CameraController.hpp"
 #include "Game/VoxelRenderer/VoxelRenderer.hpp"
+#include "Game/GameCommon.hpp"
+#include "Game/World/World.hpp"
 
 #define SCENE_BUNNY
 // #define SCENE_1
@@ -35,10 +37,8 @@ constexpr uint frameCount = 2;
 // RootSignature::sptr_t rootSig;
 
 
-Mesh* mesh;
 
 
-Light mLight;
 
 
 
@@ -56,24 +56,29 @@ public:
 
   void onDestroy() override;
 
-  float foo(float a, float b) {
-    return a + b;
-  }
 protected:
-  Camera* mCamera = nullptr;
-  CameraController* cameraController = nullptr;
+  // Camera* mCamera = nullptr;
+  // CameraController* cameraController = nullptr;
   VoxelRenderer* sceneRenderer = nullptr;
 
   S<RHIDevice> mDevice;
   S<RHIContext> mContext;
+
+  World* mWorld = nullptr;
 };
 
 void GameApplication::onInit() {
   sceneRenderer = new VoxelRenderer();
 
-  mCamera = new Camera();
-  mCamera->lookAt({ 18, 12, -2 }, { 3, 0, 5 });
-  mCamera->setProjectionPrespective(19.5, 3.f*CLIENT_ASPECT, 3.f, 0.100000f, 1500.000000f);
+  // mCamera = new Camera();
+  // mCamera->setCoordinateTransform(gGameCoordsTransform);
+  // // mCamera->transfrom().setCoordinateTransform(gGameCoordsTransform);
+  // mCamera->transfrom().localPosition() = vec3{0,0,0};
+  // mCamera->transfrom().localRotation() = vec3{0,0,0};
+  //
+  // // TODO: look at is buggy
+  // // mCamera->lookAt({ -3, -3, 3 }, { 0, 0, 0 }, {0, 0, 1});
+  // mCamera->setProjectionPrespective(19.5, 3.f*CLIENT_ASPECT, 3.f, 0.100000f, 1500.000000f);
 
   mDevice = RHIDevice::get();
   mContext = mDevice->defaultRenderContext();
@@ -81,17 +86,18 @@ void GameApplication::onInit() {
   uint w = Window::Get()->bounds().width();
   uint h = (uint)Window::Get()->bounds().height();
 
-  cameraController = new CameraController(*mCamera);
-  cameraController->speedScale(1);
-  mLight.transform.localPosition() = vec3{0, 10, 0};
+  // cameraController = new CameraController(*mCamera);
+  // cameraController->speedScale(10);
 
-  Debug::setCamera(mCamera);
-  // Debug::setDepth(Debug::DEBUG_DEPTH_DISABLE);
-  Debug::setDepth(Debug::DEBUG_DEPTH_ENABLE);
+  
+  // Debug::setDepth(Debug::DEBUG_DEPTH_ENABLE);
   // mBvh->render();
 
-  sceneRenderer->setCamera(*mCamera);
+  // sceneRenderer->setCamera(*mCamera);
   sceneRenderer->onLoad(*mContext);
+
+  mWorld = new World();
+  mWorld->onInit();
 }
 
 void GameApplication::onInput() {
@@ -101,37 +107,38 @@ void GameApplication::onInput() {
   frameAvgSec = frameAvgSec * .95 + GetMainClock().frame.second * .05;
   Window::Get()->setTitle(Stringf("Tanki - Tankraft. Frame time: %.0f ms",
                                   float(frameAvgSec * 1000.0)).c_str());
-  cameraController->onInput();
-  cameraController->onUpdate(dt);
-
-  vec2 rotation = vec2::zero;
-  if (Input::Get().isKeyDown(MOUSE_RBUTTON)) {
-    rotation = Input::Get().mouseDeltaPosition(true) * 180.f * dt;
-  }
+  // cameraController->onInput();
+  // cameraController->onUpdate(dt);
+  mWorld->onInput();
+  mWorld->onUpdate();
+  // vec2 rotation = vec2::zero;
+  // if (Input::Get().isKeyDown(MOUSE_RBUTTON)) {
+  //   rotation = Input::Get().mouseDeltaPosition(true) * 180.f * dt;
+  // }
   //
   // static float intensity = 5.f;
   // static vec3 color = vec3::one;
-  {
-    // ImGui::Begin("Light Control");
-    // ImGui::SliderFloat("Light Intensity", &intensity, 0, 100);
-    // ImGui::SliderFloat3("Light color", (float*)&color, 0, 1);
-    // ImGui::End();
-    float scale = cameraController->speedScale();
-    vec3 camPosition = mCamera->transfrom().position();
-    vec3 camRotation = mCamera->transfrom().rotation();
-    ImGui::Begin("Camera Control");
-    ImGui::SliderFloat("Camera speed", &scale, 0, 10);
-    ImGui::SliderFloat3("Camera Position", (float*)&camPosition, 0, 10);
-    ImGui::SliderFloat3("Camera Rotation", (float*)&camRotation, 0, 10);
-    ImGui::End();
-    cameraController->speedScale(scale);
-  }
+  // {
+  //   // ImGui::Begin("Light Control");
+  //   // ImGui::SliderFloat("Light Intensity", &intensity, 0, 100);
+  //   // ImGui::SliderFloat3("Light color", (float*)&color, 0, 1);
+  //   // ImGui::End();
+  //   float scale = cameraController->speedScale();
+  //   vec3 camPosition = mCamera->transfrom().position();
+  //   vec3 camRotation = mCamera->transfrom().rotation();
+  //   ImGui::Begin("Camera Control");
+  //   ImGui::SliderFloat("Camera speed", &scale, 0, 20);
+  //   ImGui::SliderFloat3("Camera Position", (float*)&camPosition, 0, 10);
+  //   ImGui::SliderFloat3("Camera Rotation", (float*)&mCamera->transfrom().localRotation(), -360, 360);
+  //   ImGui::End();
+  //   cameraController->speedScale(scale);
+  // }
   
-  ImGui::gizmos(*mCamera, mLight.transform, ImGuizmo::TRANSLATE);
 }
 
 void GameApplication::onRender() const {
-  sceneRenderer->onRenderFrame(*mContext);
+  mWorld->onRender(*sceneRenderer);
+  // sceneRenderer->onRenderFrame(*mContext);
 }
 
 void GameApplication::onStartFrame() {

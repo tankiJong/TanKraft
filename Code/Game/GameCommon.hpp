@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Engine/Core/EngineCommon.hpp"
+#include "Engine/Math/Primitives/mat44.hpp"
 class Renderer;
 class Input;
 class BitmapFont;
@@ -26,3 +27,4 @@ constexpr float SCREEN_HALF_WIDTH = SCREEN_HALF_HEIGHT * CLIENT_ASPECT;
 constexpr float SCREEN_WIDTH = SCREEN_HALF_WIDTH * 2.f; // units
 constexpr float SCREEN_HEIGHT = SCREEN_HALF_HEIGHT * 2.f; // units
 
+extern const mat44 gGameCoordsTransform;

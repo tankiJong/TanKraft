@@ -2,6 +2,10 @@
 #include "Engine/Input/Input.hpp"
 #include "Engine/Graphics/Camera.hpp"
 #include "Engine/Math/MathUtils.hpp"
+#include "Engine/Debug/Draw.hpp"
+#include "imgui/imgui.h"
+#include "imgui/ImGuizmo.h"
+#include "Engine/Gui/ImGui.hpp"
 
 static const vec3 MAX_ACCELERATION{ 1.f };
 
@@ -11,19 +15,28 @@ void CameraController::onInput() {
 
   {
     if(Input::Get().isKeyDown('W')) {
-      addForce(mCamera.transfrom().forward());
+      addForce({ mCamera.transfrom().right().xy(), 0 });
     }
     if(Input::Get().isKeyDown('S')) {
-      addForce(-mCamera.transfrom().forward());
+      addForce({ -mCamera.transfrom().right().xy(), 0 });
     }
   }
 
   {
     if (Input::Get().isKeyDown('D')) {
-      addForce(mCamera.transfrom().right());
+      addForce({ -mCamera.transfrom().up().xy(), 0 });
     }
     if (Input::Get().isKeyDown('A')) {
-      addForce(-mCamera.transfrom().right());
+      addForce({ mCamera.transfrom().up().xy(), 0 });
+    }
+  }
+
+  {
+    if (Input::Get().isKeyDown('E')) {
+      addForce({ 0,0, 1 });
+    }
+    if (Input::Get().isKeyDown('Q')) {
+      addForce({ 0,0, -1 });
     }
   }
 
@@ -53,14 +66,26 @@ void CameraController::onUpdate(float dt) {
   }
 
   // rotating
+  static Transform transform;
   {
     vec2 angularAcce = mAngularForce;
     clamp(angularAcce, -MAX_ANGULAR_ACCELERATION, MAX_ANGULAR_ACCELERATION);
 
     mAngularSpeed += angularAcce * dt;
-    Euler angle{ mAngularSpeed.y, mAngularSpeed.x, 0 };
+    Euler angle{ 0, mAngularSpeed.y, mAngularSpeed.x };
     mCamera.rotate(angle);
+    transform.localRotate(angle);
   }
+  ImGui::Begin("Test Euler");
+  ImGui::SliderFloat3("Rotation", (float*)&transform.localRotation(), -360, 360);
+  ImGui::End();
+  // transform.localRotation() = mCamera.transfrom().localRotation();
+  Debug::drawBasis(transform, 0);
+  // ImGui::gizmos(mCamera, transform, ImGuizmo::ROTATE);
+  // mat44 view = mCamera.view(), proj = mCamera.projection();
+  // mat44 trans = transform.localToWorld();
+  // ImGuizmo::DrawCube((float*)&view, (float*)&proj, (float*)&trans);
+  // mCamera.transfrom().localRotation() = vec3::zero;
 
   // antanuation
   mMoveSpeed = mMoveSpeed * .9f;

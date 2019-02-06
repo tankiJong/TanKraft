@@ -696,6 +696,10 @@ exit/B %errlev%</Command>
     <ClCompile Include="GameCommon.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="VoxelRenderer\VoxelRenderer.cpp" />
+    <ClCompile Include="World\Block.cpp" />
+    <ClCompile Include="World\BlockDef.cpp" />
+    <ClCompile Include="World\Chunk.cpp" />
+    <ClCompile Include="World\World.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\Engine\Code\Engine\Engine.vcxproj">
@@ -710,6 +714,10 @@ exit/B %errlev%</Command>
     <ClInclude Include="EngineBuildPreferences.hpp" />
     <ClInclude Include="GameCommon.hpp" />
     <ClInclude Include="VoxelRenderer\VoxelRenderer.hpp" />
+    <ClInclude Include="World\Block.hpp" />
+    <ClInclude Include="World\BlockDef.hpp" />
+    <ClInclude Include="World\Chunk.hpp" />
+    <ClInclude Include="World\World.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="VoxelRenderer\Common.hlsli" />
