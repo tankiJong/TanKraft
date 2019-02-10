@@ -12,6 +12,11 @@ PSOutput main(PSInput input)
 
 	output.color = texColor;
 	output.normal = float4(input.normal * .5f + .5f, 1.f);
+	output.tangent = float4(input.tangent * .5f + .5f, 1.f);
+
+	float3 bitangent = normalize(cross(input.normal, input.tangent));
+
+	output.bitangent = float4(bitangent * .5f + .5f, 1.f);
 	output.position = float4(input.worldPosition, 1.f);
 
 	return output;

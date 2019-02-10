@@ -15,8 +15,15 @@ public:
   void onInput();
   void onUpdate();
   void onRender(VoxelRenderer& renderer) const;
+
+  void activateChunk(ChunkCoords coords);
+
 protected:
-  std::map<ChunckCoords, Chunk*> mChunks;
+
+  Chunk* allocChunk(ChunkCoords coords) { return new Chunk(coords); }
+  void freeChunk(Chunk* chunk) { delete chunk; } 
+  void registerChunkToWorld(Chunk* chunk);
+  std::map<ChunkCoords, Chunk*> mActiveChunks;
   Camera mCamera;
   CameraController mCameraController;
 };

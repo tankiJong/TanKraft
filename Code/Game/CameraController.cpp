@@ -6,6 +6,7 @@
 #include "imgui/imgui.h"
 #include "imgui/ImGuizmo.h"
 #include "Engine/Gui/ImGui.hpp"
+#include "Engine/Debug/Log.hpp"
 
 static const vec3 MAX_ACCELERATION{ 1.f };
 
@@ -40,16 +41,28 @@ void CameraController::onInput() {
     }
   }
 
+  if(Input::Get().isKeyJustDown(KEYBOARD_SPACE)) {
+    mCamera.transfrom().localPosition() = vec3{-3, 0,0};
+    mCamera.transfrom().localRotation() = vec3::zero;
+  }
+
+  if(Input::Get().isKeyJustDown('L')) {
+    Input::Get().toggleMouseLockCursor();
+  }
+
   if (Input::Get().isKeyDown(MOUSE_MBUTTON)) {
     vec2 deltaMouse = Input::Get().mouseDeltaPosition();
     addForce(-mCamera.transfrom().right() * deltaMouse.x);
     addForce(mCamera.transfrom().up() * deltaMouse.y);
   }
 
-  if(Input::Get().isKeyDown(MOUSE_RBUTTON)) {
-    vec2 deltaMouse = Input::Get().mouseDeltaPosition(true);
-    addAngularForce(deltaMouse * 360);
-  }
+  speedScale((Input::Get().isKeyDown(KEYBOARD_SHIFT) ? 1000 : 100));
+
+  // if(Input::Get().isKeyDown(MOUSE_RBUTTON)) {
+  vec2 deltaMouse = Input::Get().mouseDeltaPosition(true);
+  vec2 deltaMousen = Input::Get().mouseDeltaPosition();
+  addAngularForce(deltaMouse * 50000);
+  // }
 
 
 }
@@ -65,22 +78,25 @@ void CameraController::onUpdate(float dt) {
     mCamera.translate(mMoveSpeed * dt * speedScale());
   }
 
-  // rotating
-  static Transform transform;
   {
     vec2 angularAcce = mAngularForce;
     clamp(angularAcce, -MAX_ANGULAR_ACCELERATION, MAX_ANGULAR_ACCELERATION);
 
     mAngularSpeed += angularAcce * dt;
-    Euler angle{ 0, mAngularSpeed.y, mAngularSpeed.x };
+    Euler angle{ 0, -mAngularSpeed.y * dt, mAngularSpeed.x * dt };
+    
     mCamera.rotate(angle);
-    transform.localRotate(angle);
+
+    mCamera.transfrom().localRotation().y
+     = clamp(mCamera.transfrom().localRotation().y,
+                  -85.f, 85.f);
+
+
   }
-  ImGui::Begin("Test Euler");
-  ImGui::SliderFloat3("Rotation", (float*)&transform.localRotation(), -360, 360);
-  ImGui::End();
+
   // transform.localRotation() = mCamera.transfrom().localRotation();
-  Debug::drawBasis(transform, 0);
+  // Transform t;
+  // Debug::drawBasis(t, 0);
   // ImGui::gizmos(mCamera, transform, ImGuizmo::ROTATE);
   // mat44 view = mCamera.view(), proj = mCamera.projection();
   // mat44 trans = transform.localToWorld();
@@ -89,10 +105,10 @@ void CameraController::onUpdate(float dt) {
 
   // antanuation
   mMoveSpeed = mMoveSpeed * .9f;
-  mForce *= .5f;
+  mForce *= 0.f;
   
-  mAngularSpeed = mAngularSpeed * .9f;
-  mAngularForce *= .5f;
+  mAngularSpeed = mAngularSpeed * .0f;
+  mAngularForce *= 0.f;
 }
 
 void CameraController::speedScale(float scale) {

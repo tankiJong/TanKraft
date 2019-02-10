@@ -98,9 +98,19 @@ void GameApplication::onInit() {
 
   mWorld = new World();
   mWorld->onInit();
+
+  Input::Get().mouseLockCursor(true);
+  // Input::Get().mouseHideCursor(false);
 }
 
 void GameApplication::onInput() {
+  static bool firstFrame = true;
+  if(!firstFrame) {
+    mWorld->onInput();
+  } else {
+    firstFrame = !firstFrame;
+    return;
+  }
   float dt = GetMainClock().frame.second;
 
   static float frameAvgSec = 0.f;
@@ -109,7 +119,6 @@ void GameApplication::onInput() {
                                   float(frameAvgSec * 1000.0)).c_str());
   // cameraController->onInput();
   // cameraController->onUpdate(dt);
-  mWorld->onInput();
   mWorld->onUpdate();
   // vec2 rotation = vec2::zero;
   // if (Input::Get().isKeyDown(MOUSE_RBUTTON)) {

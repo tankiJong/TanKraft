@@ -1,18 +1,33 @@
 ﻿#include "Chunk.hpp"
+#include "Engine/Math/Noise/SmoothNoise.hpp"
+#include "Game/World/BlockDef.hpp"
+#include "Engine/Math/Primitives/AABB2.hpp"
 
-bool ChunckCoords::operator>(const ChunckCoords& rhs) const {
-  return (x != rhs.x) ? (x > rhs.x)
-    : ((y != rhs.y) ? (y > rhs.y) : false);
+inline BlockCoords BlockCoords::fromIndex(BlockIndex index) {
+  return { Chunk::kSizeMaskX & index, 
+          (Chunk::kSizeMaskY & index) >> Chunk::kSizeBitX,
+          (Chunk::kSizeMaskZ & index) >> (Chunk::kSizeBitX + Chunk::kSizeBitY) };
 }
 
-vec3 ChunckCoords::pivotPosition() {
-  return vec3{};
+bool ChunkCoords::operator>(const ChunkCoords& rhs) const {
+  return (y != rhs.y) ? (y > rhs.y)
+    : ((x != rhs.x) ? (x > rhs.x) : false);
 }
 
-void Chunk::onUpdate() {}
+vec3 ChunkCoords::pivotPosition() {
+  return Chunk::kBlockDim * vec3{float(x) * Chunk::kChunkDimX, float(y) * Chunk::kChunkDimY, 0};
+}
+
+void Chunk::onUpdate() {
+  if(mIsDirty) {
+    reconstructMesh();
+    mIsDirty = false;
+  }
+}
 
 void Chunk::reconstructMesh() {
-  auto addBlock = [&](const vec3& center, const vec3& dimension) {
+  EXPECTS(mIsDirty);
+  auto addBlock = [&](const vec3& center, const vec3& dimension, float zMax) {
     float dx = dimension.x * .5f, dy = dimension.y * .5f, dz = dimension.z * .5f;
     vec3 bottomCenter = center - vec3{0,0,1} * dz;
 
@@ -28,29 +43,56 @@ void Chunk::reconstructMesh() {
       bottomCenter + vec3{ -dx,  dz, 0 }
     };
 
+    BlockDef* def;
+    if(center.z == zMax) {
+      def = BlockDef::name("grass");
+    } else if(center.z >= zMax - 3) {
+      def = BlockDef::name("dust");
+    } else {
+      def = BlockDef::name("stone");
+    }
+
+
+    // top
     mMesher.quad(vertices[0], vertices[1], vertices[2], vertices[3], 
-        {0,.875}, {.125, .875}, {.125, 1}, {0, 1});
+        def->uvs(BlockDef::FACE_TOP));
+
+    // bottom
     mMesher.quad(vertices[4], vertices[7], vertices[6], vertices[5],
-        {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
+        def->uvs(BlockDef::FACE_BTM));
+
+    // sides
     mMesher.quad(vertices[4], vertices[5], vertices[1], vertices[0],
-        {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
+        def->uvs(BlockDef::FACE_SIDE));
     mMesher.quad(vertices[5], vertices[6], vertices[2], vertices[1],
-        {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
+        def->uvs(BlockDef::FACE_SIDE));
     mMesher.quad(vertices[6], vertices[7], vertices[3], vertices[2],
-        {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
+        def->uvs(BlockDef::FACE_SIDE));
     mMesher.quad(vertices[7], vertices[4], vertices[0], vertices[3],
-        {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
+        def->uvs(BlockDef::FACE_SIDE));
   };
   
   mMesher.clear();
   mMesher.begin(DRAW_TRIANGES);
   for(int i = 0; i < (int)kTotalBlockCount; i++) {
 
+    constexpr BlockIndex kWorldSeaLevel = 100;
+    constexpr int kChangeRange = (int(kSizeZ) - int(kWorldSeaLevel)) / 2;
+
     BlockCoords coords = BlockCoords::fromIndex((uint16_t)i);
-    addBlock({ coords.centerPosition() }, vec3{ kBlockDim });
+    vec3 worldPosition = vec3(coords) + mCoords.pivotPosition();
+
+    float noise = Compute2dPerlinNoise(worldPosition.x , worldPosition.y, 100, 1);
+
+    int currentZMax = int(kWorldSeaLevel) + kChangeRange * noise;
+
+    if(coords.z > currentZMax) continue;
+
+    addBlock(worldPosition, vec3{ kBlockDim }, currentZMax);
 
   }
   mMesher.end();
 
   mMesh = mMesher.createMesh<vertex_lit_t>();
+
 }

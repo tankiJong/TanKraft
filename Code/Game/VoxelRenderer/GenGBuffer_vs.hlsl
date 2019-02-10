@@ -10,8 +10,8 @@ PSInput main(
 
   PSInput result;
 
-	result.worldPosition = position;
-  result.position = mul(mul(projection, view), float4(position, 1.f));
+	result.worldPosition = mul(model, float4(position, 1.f));
+  result.position = mul(mul(projection, view), float4(result.worldPosition, 1.f));
   result.color = color;
   result.uv = uv;
   result.normal = normal;

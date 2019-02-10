@@ -4,13 +4,25 @@
 #include "Math.hlsl"
 #include "Random.hlsli"
 
-#define RootSig_Common "DescriptorTable(CBV(b0, numDescriptors = 3), visibility = SHADER_VISIBILITY_ALL),"
+#define RootSig_Common "DescriptorTable(CBV(b0, numDescriptors = 4), visibility = SHADER_VISIBILITY_ALL),"
 
 #define M_PI 3.141592653
 
 struct vertex_t {
 	float4 position;
 	float4 color;
+};
+
+
+struct DisneyBRDFParam {
+	float subsurface;
+	float specular;
+	float specularTint;
+	float anisotropic;
+	float sheen;
+	float sheenTint;
+	float clearcoat;
+	float clearcoatGloss;
 };
 
 struct light_info_t {
@@ -34,6 +46,8 @@ struct light_info_t {
 cbuffer cFrameData: register(b0) {
 	float gTime;
 	float gFrameCount;
+	float gRoughness;
+	float gMetallic;
 }
 
 cbuffer cCamera : register(b1) {
@@ -47,6 +61,9 @@ cbuffer cModel: register(b2) {
 	float4x4 model;
 }
 
+cbuffer cPbrParam: register(b3) {
+	DisneyBRDFParam gPbrParam;
+}
 
 SamplerState gSampler : register(s0);
 
