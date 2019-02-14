@@ -56,7 +56,7 @@ void CameraController::onInput() {
     addForce(mCamera.transfrom().up() * deltaMouse.y);
   }
 
-  speedScale((Input::Get().isKeyDown(KEYBOARD_SHIFT) ? 1000 : 100));
+  speedScale((Input::Get().isKeyDown(KEYBOARD_SHIFT) ? 1000.f : 100.f));
 
   // if(Input::Get().isKeyDown(MOUSE_RBUTTON)) {
   vec2 deltaMouse = Input::Get().mouseDeltaPosition(true);
@@ -125,8 +125,6 @@ void CameraController::addForce(const vec3& force) {
 void CameraController::addAngularForce(const vec2& force) {
   mAngularForce += force;
 }
-
-void CameraController::acceleration(const vec3& acc) {}
 
 vec3 CameraController::speed() const {
   return mMoveSpeed * mSpeedScale;

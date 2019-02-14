@@ -8,21 +8,21 @@
 #include "Engine/Graphics/RHI/PipelineState.hpp"
 #include "Engine/Core/Time/Clock.hpp"
 #include "Engine/Graphics/Camera.hpp"
+#include "Engine/Renderer/RenderGraph/RenderNodeContext.hpp"
+
+#include "Engine/Math/MathUtils.hpp"
+#include "Engine/Debug/Draw.hpp"
+#include "Engine/Gui/ImGui.hpp"
 
 #include "VoxelRenderer/DeferredShading_ps.h"
 #include "VoxelRenderer/DeferredShading_vs.h"
 #include "VoxelRenderer/GenGBuffer_ps.h"
 #include "VoxelRenderer/GenGBuffer_vs.h"
-#include "Engine/Math/MathUtils.hpp"
-#include "Engine/Debug/Draw.hpp"
-#include "Engine/Gui/ImGui.hpp"
-#include "Engine/Math/Noise/SmoothNoise.hpp"
-#include "Engine/Renderer/RenderGraph/RenderNodeContext.hpp"
-#include "Engine/Renderer/Shader/ShaderInterop.h"
+#include "VoxelRenderer/SSAO_cs.h"
 
 // DFS TODO: add ConstBuffer class
 
-void VoxelRenderer::onLoad(RHIContext& ctx) {
+void VoxelRenderer::onLoad(RHIContext&) {
   auto size = Window::Get()->bounds().size();
   uint width = (uint)size.x;
   uint height = (uint)size.y;
@@ -56,6 +56,12 @@ void VoxelRenderer::onLoad(RHIContext& ctx) {
                  RHIResource::BindingFlag::DepthStencil | RHIResource::BindingFlag::ShaderResource);
   NAME_RHIRES(mGDepth);
 
+  mTexAO = Texture2::create( width, height, TEXTURE_FORMAT_RGBA8, 
+                            RHIResource::BindingFlag::RenderTarget | 
+                                RHIResource::BindingFlag::UnorderedAccess | 
+                                RHIResource::BindingFlag::ShaderResource);
+  NAME_RHIRES(mTexAO);
+
   mCFrameData = RHIBuffer::create(sizeof(frame_data_t), RHIResource::BindingFlag::ConstantBuffer, RHIBuffer::CPUAccess::Write);
   NAME_RHIRES(mCFrameData);
 
@@ -83,7 +89,7 @@ void VoxelRenderer::onRenderFrame(RHIContext& ctx) {
 
   cleanBuffers(ctx);
   bool result = mGraph.execute();
-
+  ENSURES(result);
   cleanupFrameData();
   //
   // ctx.bindDescriptorHeap();
@@ -135,6 +141,7 @@ void VoxelRenderer::cleanBuffers(RHIContext& ctx) {
   ctx.clearRenderTarget(*mGTangent->rtv(), Rgba::gray);
   ctx.clearRenderTarget(*mGBiTangent->rtv(), Rgba::gray);
   ctx.clearRenderTarget(*mGNormal->rtv(), Rgba::gray);
+  ctx.clearRenderTarget(*mTexAO->rtv(), Rgba::white);
 
   ctx.clearRenderTarget(*mTFinal->rtv(), Rgba::black);
   
@@ -242,86 +249,86 @@ void VoxelRenderer::copyToBackBuffer(RHIContext& ctx) {
   ctx.copyResource(*mTFinal, *RHIDevice::get()->backBuffer());
 }
 
-void VoxelRenderer::constructFrameMesh() {
-
-  constexpr float kBlockSize = 1.f; 
-
-  mTLights = TypedBuffer::For<light_info_t>(200, RHIResource::BindingFlag::ShaderResource);
-  
-  Mesher ms;
-  ms.begin(DRAW_TRIANGES);
-
-  auto addBlock = [&](const vec3& center, const vec3& dimension) {
-    float dx = dimension.x * .5f, dy = dimension.y * .5f, dz = dimension.z * .5f;
-    vec3 bottomCenter = center - vec3{0,0,1} * dz;
-
-    std::array<vec3, 8> vertices = {
-      bottomCenter + vec3{ -dx, -dy,  2*dz },
-      bottomCenter + vec3{ dx,  -dy,  2*dz },
-      bottomCenter + vec3{ dx,  dy, 2*dz },
-      bottomCenter + vec3{ -dx, dy,  2*dz },
-
-      bottomCenter + vec3{ -dx, -dz, 0 },
-      bottomCenter + vec3{ dx,  -dz, 0 },
-      bottomCenter + vec3{ dx,   dz, 0 },
-      bottomCenter + vec3{ -dx,  dz, 0 }
-    };
-
-    ms.quad(vertices[0], vertices[1], vertices[2], vertices[3], 
-        {0,.875}, {.125, .875}, {.125, 1}, {0, 1});
-    ms.quad(vertices[4], vertices[7], vertices[6], vertices[5],
-        {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
-    ms.quad(vertices[4], vertices[5], vertices[1], vertices[0],
-        {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
-    ms.quad(vertices[5], vertices[6], vertices[2], vertices[1],
-        {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
-    ms.quad(vertices[6], vertices[7], vertices[3], vertices[2],
-        {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
-    ms.quad(vertices[7], vertices[4], vertices[0], vertices[3],
-        {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
-  };
-
-  for(int j = 0; j < 100; ++j) {
-    for(int i = 0; i < 100; ++i) {
-      int kmax = abs(Compute2dPerlinNoise(i, j, 50, 3)) * 5.f + 1;
-      for(int k = 0; k < kmax; k++) {
-        vec2 centerPosition { i * kBlockSize, j * kBlockSize };
-        // ms.cube({centerPosition, k * kBlockSize}, vec3::one);
-        addBlock(
-          vec3{ centerPosition.x, centerPosition.y, k * kBlockSize }, 
-          vec3{ kBlockSize });
-      }
-    }
-  }
-
-  ms.end();
-  mFrameMesh = ms.createMesh();
-
-  uint kk = 0;
-  for(int j = 0; j < 20; ++j) {
-    for(int i = 0; i < 20; ++i) {
-      if(i % 2 != 0 || j % 2 != 0) continue;
-      vec2 centerPosition { i * 1.f, j * 1.f };
-
-      light_info_t light;
-
-      vec3 lightPosition = {centerPosition.x, getRandomf01() * 5.f + 5.f, centerPosition.y};
-      Rgba lightColor = { vec3{0, getRandomf01(), getRandomf01()} };
-      light.asPointLight(
-        lightPosition,
-        100.f, vec3{0,0,1}, 
-        lightColor);
-      mTLights->set(kk++, light);
-
-      // mat44 view = mCamera->view();
-      // mat44 proj = mCamera->projection();
-      // mat44 trans = mat44::makeTranslation(lightPosition);
-      // ImGuizmo::DrawCube((float*)&view, (float*)&proj, (float*)&trans);
-    }
-  }
-  mTLights->uploadGpu();
-
-}
+// void VoxelRenderer::constructFrameMesh() {
+//
+//   constexpr float kBlockSize = 1.f; 
+//
+//   mTLights = TypedBuffer::For<light_info_t>(200, RHIResource::BindingFlag::ShaderResource);
+//   
+//   Mesher ms;
+//   ms.begin(DRAW_TRIANGES);
+//
+//   auto addBlock = [&](const vec3& center, const vec3& dimension) {
+//     float dx = dimension.x * .5f, dy = dimension.y * .5f, dz = dimension.z * .5f;
+//     vec3 bottomCenter = center - vec3{0,0,1} * dz;
+//
+//     std::array<vec3, 8> vertices = {
+//       bottomCenter + vec3{ -dx, -dy,  2*dz },
+//       bottomCenter + vec3{ dx,  -dy,  2*dz },
+//       bottomCenter + vec3{ dx,  dy, 2*dz },
+//       bottomCenter + vec3{ -dx, dy,  2*dz },
+//
+//       bottomCenter + vec3{ -dx, -dz, 0 },
+//       bottomCenter + vec3{ dx,  -dz, 0 },
+//       bottomCenter + vec3{ dx,   dz, 0 },
+//       bottomCenter + vec3{ -dx,  dz, 0 }
+//     };
+//
+//     ms.quad(vertices[0], vertices[1], vertices[2], vertices[3], 
+//         {0,.875}, {.125, .875}, {.125, 1}, {0, 1});
+//     ms.quad(vertices[4], vertices[7], vertices[6], vertices[5],
+//         {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
+//     ms.quad(vertices[4], vertices[5], vertices[1], vertices[0],
+//         {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
+//     ms.quad(vertices[5], vertices[6], vertices[2], vertices[1],
+//         {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
+//     ms.quad(vertices[6], vertices[7], vertices[3], vertices[2],
+//         {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
+//     ms.quad(vertices[7], vertices[4], vertices[0], vertices[3],
+//         {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
+//   };
+//
+//   for(int j = 0; j < 100; ++j) {
+//     for(int i = 0; i < 100; ++i) {
+//       int kmax = abs(Compute2dPerlinNoise(i, j, 50, 3)) * 5.f + 1;
+//       for(int k = 0; k < kmax; k++) {
+//         vec2 centerPosition { i * kBlockSize, j * kBlockSize };
+//         // ms.cube({centerPosition, k * kBlockSize}, vec3::one);
+//         addBlock(
+//           vec3{ centerPosition.x, centerPosition.y, k * kBlockSize }, 
+//           vec3{ kBlockSize });
+//       }
+//     }
+//   }
+//
+//   ms.end();
+//   mFrameMesh = ms.createMesh();
+//
+//   uint kk = 0;
+//   for(int j = 0; j < 20; ++j) {
+//     for(int i = 0; i < 20; ++i) {
+//       if(i % 2 != 0 || j % 2 != 0) continue;
+//       vec2 centerPosition { i * 1.f, j * 1.f };
+//
+//       light_info_t light;
+//
+//       vec3 lightPosition = {centerPosition.x, getRandomf01() * 5.f + 5.f, centerPosition.y};
+//       Rgba lightColor = { vec3{0, getRandomf01(), getRandomf01()} };
+//       light.asPointLight(
+//         lightPosition,
+//         100.f, vec3{0,0,1}, 
+//         lightColor);
+//       mTLights->set(kk++, light);
+//
+//       // mat44 view = mCamera->view();
+//       // mat44 proj = mCamera->projection();
+//       // mat44 trans = mat44::makeTranslation(lightPosition);
+//       // ImGuizmo::DrawCube((float*)&view, (float*)&proj, (float*)&trans);
+//     }
+//   }
+//   mTLights->uploadGpu();
+//
+// }
 
 void VoxelRenderer::constructTestSphere() {
   static Transform lightTransform;
@@ -354,9 +361,9 @@ void VoxelRenderer::constructTestSphere() {
   mTLights->uploadGpu();
 }
 
-void VoxelRenderer::updateFrameConstant(RHIContext& ctx) {
+void VoxelRenderer::updateFrameConstant(RHIContext&) {
   mFrameData.gFrameCount++;
-  mFrameData.gTime = GetMainClock().total.second;
+  mFrameData.gTime = (float)GetMainClock().total.second;
   mCFrameData->updateData(mFrameData);
 
   // mGDepth = RHIDevice::get()->depthBuffer();
@@ -407,6 +414,33 @@ void VoxelRenderer::defineRenderPasses() {
       }
     };
   });
+  
+  auto& ssaoPass = mGraph.defineNode("ssao-generate", [&](RenderNodeContext& builder) {
+
+    S<const Program> prog = Resource<Program>::get("Game/Shader/Voxel/SSAO_generate");
+    builder.reset(prog, true);
+    
+    builder.readCbv("frame-data", mCFrameData, 0);
+    builder.readCbv("camera-mat", mCCamera, 1);
+    builder.readCbv("model-mat", mCModel, 2);
+
+    // builder.readSrv("g-albedo", mGAlbedo, 0);
+    builder.readSrv("g-normal", mGNormal, 1);
+    builder.readSrv("g-tangent", mGTangent, 2);
+    builder.readSrv("g-bitangent", mGBiTangent, 3);
+    builder.readSrv("g-position", mGPosition, 4);
+    builder.readSrv("g-depth", mGDepth, 5);
+
+    builder.readWriteUav("g-texAO", mTexAO, 0);
+
+    return [&](RHIContext& ctx) {
+      auto size = Window::Get()->bounds().size();
+
+      uint width = (uint)size.x;
+      uint height = (uint)size.y;
+      ctx.dispatch( width / 16 + 1, height / 16 + 1, 1);
+    };
+  });
 
   auto& deferredShadingPass = mGraph.defineNode("DeferredShading", [&](RenderNodeContext& builder) {
 
@@ -423,7 +457,8 @@ void VoxelRenderer::defineRenderPasses() {
     builder.readSrv("g-tangent", mGTangent, 2);
     builder.readSrv("g-bitangent", mGBiTangent, 3);
     builder.readSrv("g-position", mGPosition, 4);
-    builder.readSrv("g-lights", mTLights, 5);
+    builder.readSrv("g-texAO", mTexAO, 5);
+    builder.readSrv("g-lights", mTLights, 6);
 
 
     return [&](RHIContext& ctx) {
@@ -432,7 +467,9 @@ void VoxelRenderer::defineRenderPasses() {
   });
 
   // this is not optional, consider case like: a->pass1->a, a->pass2->a, a->pass2->a, you cannot figure out the sequence.
+  mGraph.depend(genBufferPass, ssaoPass);
   mGraph.depend(genBufferPass, deferredShadingPass);
+  mGraph.depend(ssaoPass, deferredShadingPass);
 
   // another way to go with is specify dependencies among resources, which gives the freedom to name res differently among nodes.
   mGraph.connect(genBufferPass, "g-albedo", deferredShadingPass, "g-albedo");
@@ -440,12 +477,22 @@ void VoxelRenderer::defineRenderPasses() {
   mGraph.connect(genBufferPass, "g-tangent", deferredShadingPass, "g-tangent");
   mGraph.connect(genBufferPass, "g-bitangent", deferredShadingPass, "g-bitangent");
   mGraph.connect(genBufferPass, "g-position", deferredShadingPass, "g-position");
+
+  mGraph.connect(genBufferPass, "g-normal", ssaoPass, "g-normal");
+  mGraph.connect(genBufferPass, "g-tangent", ssaoPass, "g-tangent");
+  mGraph.connect(genBufferPass, "g-bitangent", ssaoPass, "g-bitangent");
+  mGraph.connect(genBufferPass, "g-position", ssaoPass, "g-position");
+  mGraph.connect(genBufferPass, "g-depth", ssaoPass, "g-depth");
+
+  mGraph.connect(ssaoPass, "g-texAO", deferredShadingPass, "g-texAO");
+
   /* I will want something like: genBufferPass["g-albedo"] >> deferredShadingPass["g-albedo"]
   / or: mGraph | "passA.gAlbedo" >> "passB.color"
                | "passA.gNormal" >> "passB.worldNormal"
   */
 
-  mGraph.setOutput(deferredShadingPass, "final-image");
+  mGraph.setOutput(ssaoPass, "g-texAO");
+  // mGraph.setOutput(deferredShadingPass, "final-image");
 
   mGraph.compile();
 
@@ -486,18 +533,14 @@ DEF_RESOURCE(Program, "Game/Shader/Voxel/DeferredShading") {
   prog->stage(SHADER_TYPE_FRAGMENT).setFromBinary(gDeferredShading_ps, sizeof(gDeferredShading_ps));
   prog->compile();
 
-  // RenderState state;
-  // state.isWriteDepth = FLAG_FALSE;
-  // state.depthMode = COMPARE_ALWAYS;
-  // state.depthMode = COMPARE_LEQUAL;
-  // state.colorBlendOp = BLEND_OP_ADD;
-  // state.colorSrcFactor = BLEND_F_SRC_ALPHA;
-  // state.colorDstFactor = BLEND_F_DST_ALPHA;
-  // state.alphaBlendOp = BLEND_OP_ADD;
-  // state.alphaSrcFactor = BLEND_F_SRC_ALPHA;
-  // state.alphaDstFactor = BLEND_F_DST_ALPHA;
-  // state.cullMode = CULL_NONE;
-  // prog->setRenderState(state);
+  return prog;
+}
+
+DEF_RESOURCE(Program, "Game/Shader/Voxel/SSAO_generate") {
+  Program::sptr_t prog = Program::sptr_t(new Program());
+
+  prog->stage(SHADER_TYPE_COMPUTE).setFromBinary(gSSAO_cs, sizeof(gSSAO_cs));
+  prog->compile();
 
   return prog;
 }

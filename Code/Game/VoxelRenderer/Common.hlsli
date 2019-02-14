@@ -69,7 +69,26 @@ SamplerState gSampler : register(s0);
 
 	
 
+float3 GetRandomDirection(inout uint seed, float3 normal, float3 tangent, float3 bitangent) {
 
+	float3x3 tbn = transpose(float3x3(tangent, normal, bitangent));
+
+	Randomf r = rnd01(seed); 
+	seed = r.seed;
+	float b = r.value; // cosTheta -> y
+
+	r = rnd01(seed);
+	seed = r.seed;
+	float sinTheta = sqrt(1 - b*b);
+	float phi = 2 * 3.1415926f * r.value;
+
+	float a = sinTheta * cos(phi);
+	float c = sinTheta * sin(phi);
+
+	float3 ssample = normalize(mul(tbn, float3(a, b, c)));
+
+	return ssample;
+}
 
 
 #endif

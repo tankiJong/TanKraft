@@ -707,9 +707,6 @@ exit/B %errlev%</Command>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="..\..\ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="CameraController.hpp" />
     <ClInclude Include="EngineBuildPreferences.hpp" />
     <ClInclude Include="GameCommon.hpp" />
@@ -764,6 +761,16 @@ exit/B %errlev%</Command>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    </FxCompile>
+    <FxCompile Include="VoxelRenderer\SSAO_cs.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|x64'">Compute</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|Win32'">Compute</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'">Compute</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|x64'">Compute</ShaderType>
     </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

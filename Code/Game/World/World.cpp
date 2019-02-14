@@ -12,7 +12,7 @@ void World::onInit() {
   mCamera.setCoordinateTransform(gGameCoordsTransform);
   // mCamera.transfrom().setCoordinateTransform(gGameCoordsTransform);
   mCamera.transfrom().setRotationOrder(ROTATION_YZX);
-  mCamera.transfrom().localPosition() = vec3{-10,0,0};
+  mCamera.transfrom().localPosition() = vec3{-10,0,120};
   mCamera.transfrom().localRotation() = vec3{0,0,0};
 
   // TODO: look at is buggy
@@ -54,7 +54,7 @@ void World::onInput() {
 }
 
 void World::onUpdate() {
-  float dt = GetMainClock().frame.second;
+  float dt = (float)GetMainClock().frame.second;
   mCameraController.onUpdate(dt);
 
   for(auto& [coords, chunk]: mActiveChunks) {

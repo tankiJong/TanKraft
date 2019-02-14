@@ -22,8 +22,6 @@ public:
 
   void onRenderFrame(RHIContext& ctx) override;
 
-  void onRenderGui(RHIContext& ctx) override {}
-
   void issueChunk(const Chunk* chunk);
 
   void setCamera(const Camera& cam) {
@@ -65,6 +63,7 @@ protected:
   Texture2::sptr_t mGTangent;
   Texture2::sptr_t mGBiTangent;
 
+  Texture2::sptr_t mTexAO;
   // resource
   TypedBuffer::sptr_t mTLights;
 

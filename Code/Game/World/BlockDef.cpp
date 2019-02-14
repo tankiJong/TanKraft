@@ -6,7 +6,7 @@
 
 std::array<BlockDef, BlockDef::kTotalBlockDef> BlockDef::BlockDefs = {
   BlockDef{ "air", {CI(0,0), CI(0,0), CI(0,0)}},
-  BlockDef{ "grass", {CI(1,0), CI(3,3), CI(4, 3)}},
+  BlockDef{ "grass", {CI(21,0), CI(3,3), CI(4, 3)}},
   BlockDef{ "dust", {CI(4, 3), CI(4, 3), CI(4, 3)}},
   BlockDef{ "stone", {CI(1, 4), CI(1, 4), CI(1, 4)}},
 };

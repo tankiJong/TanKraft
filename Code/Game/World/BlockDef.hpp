@@ -29,7 +29,7 @@ public:
 
   static std::array<BlockDef, kTotalBlockDef> BlockDefs;
   static BlockDef* name(std::string_view defName);
-  static constexpr uint spriteCoordsToIndex(uint x, uint y) { return x + y * kSpritesheetUnitCountX; }
+  static constexpr uint spriteCoordsToIndex(uint x, uint y) { return x + y * (uint)kSpritesheetUnitCountX; }
 
   static uvec2 spriteIndexToCoords(uint index);
 

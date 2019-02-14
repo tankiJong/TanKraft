@@ -7,7 +7,7 @@
 #include "Engine/Graphics/Model/Mesher.hpp"
 
 class Mesh;
-class aabb3;
+struct aabb3;
 
 using BlockIndex = uint16_t;
 
@@ -52,12 +52,13 @@ public:
   static constexpr float kChunkDimY = kSizeY * kBlockDim;
   static constexpr float kChunkDimZ = kSizeZ * kBlockDim;
 
-  static constexpr BlockIndex kSizeMaskX = ~((~0) << kSizeBitX);
-  static constexpr BlockIndex kSizeMaskY = ((1 << (kSizeBitX+kSizeBitY)) - 1) ^ kSizeMaskX;
-  static constexpr BlockIndex kSizeMaskZ = (~0) ^ (kSizeMaskX | kSizeMaskY);
+  static constexpr BlockIndex kSizeMaskX = BlockIndex(~((~0u) << kSizeBitX));
+  static constexpr BlockIndex kSizeMaskY = BlockIndex(((1u << (kSizeBitX+kSizeBitY)) - 1u) ^ kSizeMaskX);
+  static constexpr BlockIndex kSizeMaskZ = BlockIndex((~0u) ^ (kSizeMaskX | kSizeMaskY));
 
   Chunk(ChunkCoords coords): mCoords(std::move(coords)) {}
 
+  void onInit();
   void onUpdate();
 
   Mesh* mesh() const { return mMesh; };
@@ -65,6 +66,9 @@ public:
 
   aabb3 bounds();
 protected:
+
+  void generateBlocks();
+
   void reconstructMesh();
   Block mBlocks[kTotalBlockCount]; // 0xffff
   ChunkCoords mCoords;

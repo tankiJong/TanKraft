@@ -17,8 +17,6 @@ public:
   float speedScale() const { return mSpeedScale; };
   void addForce(const vec3& force);
   void addAngularForce(const vec2& force);
-  void acceleration(const vec3& acc);
-  vec3 acceleration() const;
 
   vec3 speed() const;
 protected:

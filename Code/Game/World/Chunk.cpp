@@ -18,11 +18,18 @@ vec3 ChunkCoords::pivotPosition() {
   return Chunk::kBlockDim * vec3{float(x) * Chunk::kChunkDimX, float(y) * Chunk::kChunkDimY, 0};
 }
 
+void Chunk::onInit() {
+}
+
 void Chunk::onUpdate() {
   if(mIsDirty) {
     reconstructMesh();
     mIsDirty = false;
   }
+}
+
+void Chunk::generateBlocks() {
+  
 }
 
 void Chunk::reconstructMesh() {
@@ -44,7 +51,7 @@ void Chunk::reconstructMesh() {
     };
 
     BlockDef* def;
-    if(center.z == zMax) {
+    if(center.z >= zMax - 1) {
       def = BlockDef::name("grass");
     } else if(center.z >= zMax - 3) {
       def = BlockDef::name("dust");
@@ -73,6 +80,7 @@ void Chunk::reconstructMesh() {
   };
   
   mMesher.clear();
+  mMesher.setWindingOrder(WIND_CLOCKWISE);
   mMesher.begin(DRAW_TRIANGES);
   for(int i = 0; i < (int)kTotalBlockCount; i++) {
 
@@ -84,7 +92,7 @@ void Chunk::reconstructMesh() {
 
     float noise = Compute2dPerlinNoise(worldPosition.x , worldPosition.y, 100, 1);
 
-    int currentZMax = int(kWorldSeaLevel) + kChangeRange * noise;
+    float currentZMax = float(kChangeRange) * noise + float(kWorldSeaLevel);
 
     if(coords.z > currentZMax) continue;
 

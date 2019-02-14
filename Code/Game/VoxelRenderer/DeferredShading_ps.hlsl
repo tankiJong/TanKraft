@@ -44,7 +44,8 @@ PSOutput main(PostProcessingVSOutput input)
 	// finalColor += pbrIndirectLighting(diffuse, 1.f.xxx, 1.f.xxx);
 	// finalColor += pbrEnvironmentLighting(color.xyz, normal, gRoughness, gMetallic, 1, eye, 1.f.xxx);
 
-	finalColor += color.xyz * 1.f;
+	float ao = gTexAO.Sample(gSampler, input.tex).x;
+	finalColor += color.xyz * ao;
 
 	output.color = float4(saturate(finalColor), 1);
 	return output;

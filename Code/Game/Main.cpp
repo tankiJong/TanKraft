@@ -83,8 +83,8 @@ void GameApplication::onInit() {
   mDevice = RHIDevice::get();
   mContext = mDevice->defaultRenderContext();
 
-  uint w = Window::Get()->bounds().width();
-  uint h = (uint)Window::Get()->bounds().height();
+  // uint w = (uint)Window::Get()->bounds().width();
+  // uint h = (uint)Window::Get()->bounds().height();
 
   // cameraController = new CameraController(*mCamera);
   // cameraController->speedScale(10);
@@ -111,10 +111,10 @@ void GameApplication::onInput() {
     firstFrame = !firstFrame;
     return;
   }
-  float dt = GetMainClock().frame.second;
+  float dt = (float)GetMainClock().frame.second;
 
   static float frameAvgSec = 0.f;
-  frameAvgSec = frameAvgSec * .95 + GetMainClock().frame.second * .05;
+  frameAvgSec = frameAvgSec * .95f + dt * .05f;
   Window::Get()->setTitle(Stringf("Tanki - Tankraft. Frame time: %.0f ms",
                                   float(frameAvgSec * 1000.0)).c_str());
   // cameraController->onInput();
@@ -161,7 +161,7 @@ void GameApplication::onDestroy() {
 
 
 //-----------------------------------------------------------------------------------------------
-int __stdcall WinMain(HINSTANCE, HINSTANCE, LPSTR commandLineString, int) {
+int __stdcall WinMain(HINSTANCE, HINSTANCE, LPSTR /*commandLineString*/, int) {
   GameApplication app;
 
   while (app.runFrame());

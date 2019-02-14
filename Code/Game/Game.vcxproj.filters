@@ -39,9 +39,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="..\..\ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="GameCommon.hpp">
       <Filter>General</Filter>
     </ClInclude>
@@ -65,5 +62,6 @@
     <FxCompile Include="VoxelRenderer\GenGBuffer_vs.hlsl" />
     <FxCompile Include="VoxelRenderer\DeferredShading_ps.hlsl" />
     <FxCompile Include="VoxelRenderer\DeferredShading_vs.hlsl" />
+    <FxCompile Include="VoxelRenderer\SSAO_cs.hlsl" />
   </ItemGroup>
 </Project>
