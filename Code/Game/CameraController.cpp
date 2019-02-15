@@ -16,19 +16,19 @@ void CameraController::onInput() {
 
   {
     if(Input::Get().isKeyDown('W')) {
-      addForce({ mCamera.transfrom().right().xy(), 0 });
+      addForce({ mCamera.transfrom().right().xy().normalized(), 0 });
     }
     if(Input::Get().isKeyDown('S')) {
-      addForce({ -mCamera.transfrom().right().xy(), 0 });
+      addForce({ -mCamera.transfrom().right().xy().normalized(), 0 });
     }
   }
 
   {
     if (Input::Get().isKeyDown('D')) {
-      addForce({ -mCamera.transfrom().up().xy(), 0 });
+      addForce({ -mCamera.transfrom().up().xy().normalized(), 0 });
     }
     if (Input::Get().isKeyDown('A')) {
-      addForce({ mCamera.transfrom().up().xy(), 0 });
+      addForce({ mCamera.transfrom().up().xy().normalized(), 0 });
     }
   }
 
@@ -60,8 +60,7 @@ void CameraController::onInput() {
 
   // if(Input::Get().isKeyDown(MOUSE_RBUTTON)) {
   vec2 deltaMouse = Input::Get().mouseDeltaPosition(true);
-  vec2 deltaMousen = Input::Get().mouseDeltaPosition();
-  addAngularForce(deltaMouse * 50000);
+  addAngularForce(deltaMouse * 500000);
   // }
 
 

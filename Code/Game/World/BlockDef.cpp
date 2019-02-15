@@ -4,11 +4,11 @@
 
 #define CI(x,y) spriteCoordsToIndex(x,y)
 
-std::array<BlockDef, BlockDef::kTotalBlockDef> BlockDef::BlockDefs = {
-  BlockDef{ "air", {CI(0,0), CI(0,0), CI(0,0)}},
-  BlockDef{ "grass", {CI(21,0), CI(3,3), CI(4, 3)}},
-  BlockDef{ "dust", {CI(4, 3), CI(4, 3), CI(4, 3)}},
-  BlockDef{ "stone", {CI(1, 4), CI(1, 4), CI(1, 4)}},
+std::array<BlockDef, BlockDef::kTotalBlockDef> BlockDef::sBlockDefs = {
+  BlockDef{0, "air", {CI(0,0), CI(0,0), CI(0,0)}},
+  BlockDef{1, "grass", {CI(21,0), CI(3,3), CI(4, 3)}},
+  BlockDef{2, "dust", {CI(4, 3), CI(4, 3), CI(4, 3)}},
+  BlockDef{3, "stone", {CI(1, 4), CI(1, 4), CI(1, 4)}},
 };
 
 #undef CI
@@ -23,11 +23,15 @@ aabb2 BlockDef::uvs(eFace face) const {
   return { mins, maxs };
 }
 
-BlockDef* BlockDef::name(std::string_view defName) {
-  for(auto& blockDef: BlockDefs) {
+BlockDef* BlockDef::get(std::string_view defName) {
+  for(auto& blockDef: sBlockDefs) {
     if(blockDef.mName == defName) return &blockDef;
   }
   return nullptr;
+}
+
+BlockDef* BlockDef::get(block_id_t id) {
+  return &sBlockDefs[id];
 }
 
 uvec2  BlockDef::spriteIndexToCoords(uint index) {

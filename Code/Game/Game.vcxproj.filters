@@ -37,6 +37,9 @@
     <ClCompile Include="World\World.cpp">
       <Filter>General</Filter>
     </ClCompile>
+    <ClCompile Include="Utils\Config.cpp">
+      <Filter>General</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameCommon.hpp">
@@ -51,6 +54,7 @@
     <ClInclude Include="World\BlockDef.hpp" />
     <ClInclude Include="World\Chunk.hpp" />
     <ClInclude Include="World\World.hpp" />
+    <ClInclude Include="Utils\Config.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="VoxelRenderer\Common.hlsli" />

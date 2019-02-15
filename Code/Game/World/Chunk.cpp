@@ -15,26 +15,86 @@ bool ChunkCoords::operator>(const ChunkCoords& rhs) const {
 }
 
 vec3 ChunkCoords::pivotPosition() {
-  return Chunk::kBlockDim * vec3{float(x) * Chunk::kChunkDimX, float(y) * Chunk::kChunkDimY, 0};
+  return vec3{float(x*Chunk::kSizeX), float(y*Chunk::kSizeY), 0};
+}
+
+ChunkCoords ChunkCoords::fromWorld(vec3 position) {
+  return { (int)floor(position.x) / Chunk::kSizeX, (int)floor(position.y) / Chunk::kSizeY};
 }
 
 void Chunk::onInit() {
+  SAFE_DELETE(mMesh);
+  mMesher.clear();
+  mMesher.setWindingOrder(WIND_CLOCKWISE);
+  mMesher.begin(DRAW_TRIANGES);
+  mMesher.quad(mCoords.pivotPosition(), {1, 0, 0}, {0, 1, 0}, vec2{float(kSizeX), float(kSizeY)} * .2f);
+  mMesher.end();
+  mMesh = mMesher.createMesh<vertex_lit_t>();
+
+  mIsDirty = true;
+
+  // check 
+  // if can load it from disk
+  // if not, generate it
+  generateBlocks();
 }
 
 void Chunk::onUpdate() {
-  if(mIsDirty) {
-    reconstructMesh();
-    mIsDirty = false;
-  }
+
+}
+
+void Chunk::onDestroy() {
+  SAFE_DELETE(mMesh);
+
+  // get rid of all connections to neighbors
+  // try to save it to disk
 }
 
 void Chunk::generateBlocks() {
-  
+  for(int i = 0; i < (int)kTotalBlockCount; i++) {
+
+    constexpr BlockIndex kWorldSeaLevel = 100;
+    constexpr int kChangeRange = (int(kSizeZ) - int(kWorldSeaLevel)) / 2;
+
+    BlockCoords coords = BlockCoords::fromIndex((uint16_t)i);
+    vec3 worldPosition = vec3(coords) + mCoords.pivotPosition();
+
+    float noise = Compute2dPerlinNoise(worldPosition.x , worldPosition.y, 100, 1);
+
+    float currentZMax = float(kChangeRange) * noise + float(kWorldSeaLevel);
+
+    BlockDef* air = BlockDef::get("air");
+    BlockDef* dust = BlockDef::get("dust");
+    BlockDef* stone = BlockDef::get("stone");
+    BlockDef* grass = BlockDef::get("grass");
+
+    if(coords.z > currentZMax) {
+      mBlocks[i].reset(*air);
+    } else if(coords.z >= currentZMax - 1) {
+      mBlocks[i].reset(*grass);
+    } else if(coords.z >= currentZMax - 3) {
+      mBlocks[i].reset(*dust);
+    } else {
+      mBlocks[i].reset(*stone);
+    }
+  }
 }
 
 void Chunk::reconstructMesh() {
   EXPECTS(mIsDirty);
-  auto addBlock = [&](const vec3& center, const vec3& dimension, float zMax) {
+  SAFE_DELETE(mMesh);
+
+  // mMesher.clear();
+  // mMesher.setWindingOrder(WIND_CLOCKWISE);
+  // mMesher.begin(DRAW_TRIANGES);
+  // mMesher.quad(mCoords.pivotPosition(), {1, 0, 0}, {0, 1, 0}, vec2{float(kSizeX), float(kSizeY)} * .8f);
+  // mMesher.end();
+  // mMesh = mMesher.createMesh<vertex_lit_t>();
+  // mIsDirty = false;
+  // return;
+
+  auto addBlock = [&](Block& block, vec3 center) {
+    vec3 dimension = vec3::one;
     float dx = dimension.x * .5f, dy = dimension.y * .5f, dz = dimension.z * .5f;
     vec3 bottomCenter = center - vec3{0,0,1} * dz;
 
@@ -50,15 +110,9 @@ void Chunk::reconstructMesh() {
       bottomCenter + vec3{ -dx,  dz, 0 }
     };
 
-    BlockDef* def;
-    if(center.z >= zMax - 1) {
-      def = BlockDef::name("grass");
-    } else if(center.z >= zMax - 3) {
-      def = BlockDef::name("dust");
-    } else {
-      def = BlockDef::name("stone");
-    }
+    const BlockDef* def = &block.type();
 
+    if(block.id() == 0) return;
 
     // top
     mMesher.quad(vertices[0], vertices[1], vertices[2], vertices[3], 
@@ -88,19 +142,14 @@ void Chunk::reconstructMesh() {
     constexpr int kChangeRange = (int(kSizeZ) - int(kWorldSeaLevel)) / 2;
 
     BlockCoords coords = BlockCoords::fromIndex((uint16_t)i);
-    vec3 worldPosition = vec3(coords) + mCoords.pivotPosition();
+    vec3 worldPosition = vec3(coords) + mCoords.pivotPosition() + vec3{.5f};
 
-    float noise = Compute2dPerlinNoise(worldPosition.x , worldPosition.y, 100, 1);
-
-    float currentZMax = float(kChangeRange) * noise + float(kWorldSeaLevel);
-
-    if(coords.z > currentZMax) continue;
-
-    addBlock(worldPosition, vec3{ kBlockDim }, currentZMax);
+    addBlock(mBlocks[i], worldPosition);
 
   }
   mMesher.end();
 
   mMesh = mMesher.createMesh<vertex_lit_t>();
 
+  mIsDirty = false;
 }

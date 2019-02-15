@@ -19,6 +19,8 @@
 #include "VoxelRenderer/GenGBuffer_ps.h"
 #include "VoxelRenderer/GenGBuffer_vs.h"
 #include "VoxelRenderer/SSAO_cs.h"
+#include "Engine/Renderer/RenderGraph/RenderPass/BlurPass.hpp"
+#include "Engine/Input/Input.hpp"
 
 // DFS TODO: add ConstBuffer class
 
@@ -434,6 +436,7 @@ void VoxelRenderer::defineRenderPasses() {
     builder.readWriteUav("g-texAO", mTexAO, 0);
 
     return [&](RHIContext& ctx) {
+      if(Input::Get().isKeyDown('N')) return;
       auto size = Window::Get()->bounds().size();
 
       uint width = (uint)size.x;
@@ -441,6 +444,9 @@ void VoxelRenderer::defineRenderPasses() {
       ctx.dispatch( width / 16 + 1, height / 16 + 1, 1);
     };
   });
+
+  auto& ssaoBlurPassV = mGraph.createNode<BlurPass>("ssao-blur-v", mTexAO, true);
+  auto& ssaoBlurPassH = mGraph.createNode<BlurPass>("ssao-blur-h", mTexAO, false);
 
   auto& deferredShadingPass = mGraph.defineNode("DeferredShading", [&](RenderNodeContext& builder) {
 
@@ -467,10 +473,11 @@ void VoxelRenderer::defineRenderPasses() {
   });
 
   // this is not optional, consider case like: a->pass1->a, a->pass2->a, a->pass2->a, you cannot figure out the sequence.
-  mGraph.depend(genBufferPass, ssaoPass);
-  mGraph.depend(genBufferPass, deferredShadingPass);
-  mGraph.depend(ssaoPass, deferredShadingPass);
-
+  // mGraph.depend(genBufferPass, ssaoPass);
+  // mGraph.depend(genBufferPass, deferredShadingPass);
+  mGraph.depend(ssaoBlurPassV, ssaoBlurPassH);
+  mGraph.depend(ssaoBlurPassH, deferredShadingPass);
+  
   // another way to go with is specify dependencies among resources, which gives the freedom to name res differently among nodes.
   mGraph.connect(genBufferPass, "g-albedo", deferredShadingPass, "g-albedo");
   mGraph.connect(genBufferPass, "g-normal", deferredShadingPass, "g-normal");
@@ -484,15 +491,16 @@ void VoxelRenderer::defineRenderPasses() {
   mGraph.connect(genBufferPass, "g-position", ssaoPass, "g-position");
   mGraph.connect(genBufferPass, "g-depth", ssaoPass, "g-depth");
 
-  mGraph.connect(ssaoPass, "g-texAO", deferredShadingPass, "g-texAO");
+  mGraph.connect(ssaoPass, "g-texAO", ssaoBlurPassV, "blur-input");
 
   /* I will want something like: genBufferPass["g-albedo"] >> deferredShadingPass["g-albedo"]
   / or: mGraph | "passA.gAlbedo" >> "passB.color"
                | "passA.gNormal" >> "passB.worldNormal"
   */
 
-  mGraph.setOutput(ssaoPass, "g-texAO");
-  // mGraph.setOutput(deferredShadingPass, "final-image");
+  // mGraph.setOutput(ssaoPass, "g-texAO");
+  // mGraph.setOutput(ssaoBlurPassH, "blur-output");
+  mGraph.setOutput(deferredShadingPass, "final-image");
 
   mGraph.compile();
 

@@ -4,9 +4,10 @@
 class uvec2;
 class aabb2;
 
+using block_id_t = uint8_t;
 class BlockDef {
 public:
-  static constexpr uint kTotalBlockDef = 4;
+  static constexpr block_id_t kTotalBlockDef = 4;
   static constexpr float kSpritesheetSizeX = 1024;
   static constexpr float kSpritesheetSizeY = 1024;
 
@@ -21,20 +22,22 @@ public:
     FACE_BTM,
     NUM_FACE,
   };
-  BlockDef(std::string_view name, const std::array<uint, NUM_FACE>& spriteIndexs)
-    : mName(name)
+  BlockDef(block_id_t id, std::string_view name, const std::array<uint, NUM_FACE>& spriteIndexs)
+    : mTypeId(id)
+    , mName(name)
     , mSpriteIndex{spriteIndexs} {}
 
   aabb2 uvs(eFace face) const;
-
-  static std::array<BlockDef, kTotalBlockDef> BlockDefs;
-  static BlockDef* name(std::string_view defName);
+  block_id_t id() const { return mTypeId; }
+  static BlockDef* get(std::string_view defName);
+  static BlockDef* get(block_id_t id);
   static constexpr uint spriteCoordsToIndex(uint x, uint y) { return x + y * (uint)kSpritesheetUnitCountX; }
 
   static uvec2 spriteIndexToCoords(uint index);
 
 protected:
-
+  static std::array<BlockDef, kTotalBlockDef> sBlockDefs;
+  block_id_t mTypeId;
   std::string mName;
   std::array<uint, NUM_FACE> mSpriteIndex = { 0 };
 
