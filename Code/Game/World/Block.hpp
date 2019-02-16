@@ -13,5 +13,5 @@ public:
   static Block invalid;
 protected:
   block_id_t mType = 0;
-  uint16_t mState = 0;
+  uint8_t mState = 0;
 };

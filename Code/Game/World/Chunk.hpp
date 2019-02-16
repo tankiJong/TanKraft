@@ -46,6 +46,16 @@ public:
   static ChunkCoords fromWorld(vec3 position);
 };
 
+namespace std {
+  template<>
+  struct hash<ChunkCoords> {
+    size_t operator()(const ChunkCoords& c) const noexcept {
+      std::hash<int> hasher;
+      return  (hasher(c.x) ^ hasher(c.y) << 1);
+    };
+  };
+}
+
 class Chunk {
 public:
   
@@ -64,7 +74,7 @@ public:
   static constexpr BlockIndex kSizeMaskZ = BlockIndex((~0u) ^ (kSizeMaskX | kSizeMaskY));
 
   Chunk(ChunkCoords coords): mCoords(std::move(coords)) {}
-
+  ~Chunk();
   enum eNeighbor: uint8_t {
     NEIGHBOR_POS_X,
     NEIGHBOR_NEG_X,
@@ -80,8 +90,8 @@ public:
   public:
 
     void step(eNeighbor dir);
-    void step(ChunkCoords deltaCoords);
-    Iterator operator+(ChunkCoords deltaCoords) const;
+    void step(const ChunkCoords& deltaCoords);
+    Iterator operator+(const ChunkCoords& deltaCoords) const;
 
     bool valid() const { return self != nullptr; }
 
@@ -100,23 +110,23 @@ public:
     friend class Chunk;
 
   public:
-    BlockIter next(BlockCoords deltaCoords) const;
-    void step(BlockCoords deltaCoords);
+    BlockIter next(const BlockCoords& deltaCoords) const;
+    void step(const BlockCoords& deltaCoords);
     bool valid() const;
-    BlockIter operator+(BlockCoords deltaCoords) const;
+    BlockIter operator+(const BlockCoords& deltaCoords) const;
 
     Block& operator*() const;
     Block* operator->() const;
 
   protected:
-    BlockIter(Chunk* c, BlockIndex idx);
+    BlockIter(Chunk* c, BlockCoords crds);
 
     Iterator chunk;
-    BlockIndex blockIndex;
+    BlockCoords blockCoords;
     Block* block = nullptr;
   };
 
-  void onInit(World* world);
+  void onInit();
   void onUpdate();
 
   Mesh* mesh() const { return mMesh; }
@@ -132,10 +142,13 @@ public:
   bool reconstructMesh();
 
   Iterator iterator();
-  BlockIter blockIter(BlockIndex index) { return { this, index }; };
+  BlockIter blockIter(const BlockCoords& coords) { return { this, coords }; };
   Iterator neighbor(eNeighbor loc) const { return { mNeighbors[loc] }; }
 
   void setNeighbor(eNeighbor loc, Chunk* chunk) { mNeighbors[loc] = chunk; }
+
+  void onRegisterToWorld(World* world);
+  void onUnregisterFromWorld();
 protected:
 
   void generateBlocks();
@@ -143,7 +156,7 @@ protected:
   Block mBlocks[kTotalBlockCount]; // 0xffff
   ChunkCoords mCoords;
   std::array<Chunk*, NUM_NEIGHBOR> mNeighbors;
-  Mesh* mMesh = nullptr;
+  owner<Mesh*> mMesh = nullptr;
   Mesher mMesher;
   bool mIsDirty = true;
   World* mOwner;

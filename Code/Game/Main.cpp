@@ -155,9 +155,11 @@ void GameApplication::onStartFrame() {
 }
 
 void GameApplication::onDestroy() {
-  delete sceneRenderer;
+  mWorld->onDestroy();
+  SAFE_DELETE(mWorld);
+  SAFE_DELETE(sceneRenderer);
   mDevice->cleanup();
-};
+}
 
 
 //-----------------------------------------------------------------------------------------------

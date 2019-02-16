@@ -41,6 +41,7 @@ static constexpr auto gNegativeDivLookUp = []() constexpr {
 inline div_tt quick_div(int num, int divider) {
   // EXPECTS(divider != 0);
   int absnum = abs(num);
+
   if(absnum < divider) {
     if(num >= 0) {
       return { num, 0};
@@ -48,6 +49,7 @@ inline div_tt quick_div(int num, int divider) {
       return { num + divider, -1 };
     }
   }
+
   if(absnum < kDivNumMax && divider < kDivDividerMax) {
     if(num >= 0) {
       return gPositiveDivLookUp[divider][num];
@@ -68,9 +70,9 @@ BlockIndex BlockCoords::toIndex() const {
   EXPECTS(y >=0);
   EXPECTS(z >=0);
 
-  index |= uint16_t(x) & Chunk::kSizeMaskX;
-  index |= (uint16_t(y) << Chunk::kSizeBitX) & Chunk::kSizeMaskY;
-  index |= (uint16_t(z) << (Chunk::kSizeBitX + Chunk::kSizeBitY)) & Chunk::kSizeMaskZ;
+  index = (x & Chunk::kSizeMaskX)
+        | ((y << Chunk::kSizeBitX) & Chunk::kSizeMaskY)
+        | ((z << (Chunk::kSizeBitX + Chunk::kSizeBitY)) & Chunk::kSizeMaskZ);
 
   return index;
 }
@@ -120,13 +122,17 @@ ChunkCoords ChunkCoords::fromWorld(vec3 position) {
   return { (int)floor(position.x) / Chunk::kSizeX, (int)floor(position.y) / Chunk::kSizeY};
 }
 
+Chunk::~Chunk() {
+  EXPECTS(mMesh == nullptr);  
+}
+
 void Chunk::Iterator::step(eNeighbor dir) {
   if(self != nullptr) {
     *this = self->neighbor(dir);
   }
 }
 
-void Chunk::Iterator::step(ChunkCoords deltaCoords) {
+void Chunk::Iterator::step(const ChunkCoords& deltaCoords) {
 
   if(self == nullptr) return;
   
@@ -143,55 +149,60 @@ void Chunk::Iterator::step(ChunkCoords deltaCoords) {
 
 }
 
-Chunk::Iterator Chunk::Iterator::operator+(ChunkCoords deltaCoords) const {
+Chunk::Iterator Chunk::Iterator::operator+(const ChunkCoords& deltaCoords) const {
   Iterator iter = *this;
   iter.step(deltaCoords);
   return iter;
 }
 
-Chunk::BlockIter Chunk::BlockIter::next(BlockCoords deltaCoords) const {
+Chunk::BlockIter Chunk::BlockIter::next(const BlockCoords& deltaCoords) const {
   BlockIter iter = *this;
   iter.step(deltaCoords);
   return iter;
 }
 
-void Chunk::BlockIter::step(BlockCoords deltaCoords) {
+void Chunk::BlockIter::step(const BlockCoords& deltaCoords) {
   if(!chunk.valid()) return;
 
-  BlockCoords current = BlockCoords::fromIndex(blockIndex);
+  BlockCoords current = blockCoords;
 
   // check whether it's over the z bound
   current.z += deltaCoords.z;
-  deltaCoords.z = 0;
+  // deltaCoords.z = 0;
 
   if(current.z >= kSizeZ || current.z < 0) {
     chunk = { nullptr };
     return;
   }
 
-  // wrapping around the chunks
-  {
-    ChunkCoords chunkShift;
-    {
-      int expect = current.x + deltaCoords.x;
-      auto re      = quick_div(expect, kSizeX);
-      current.x    = re.rem  ;
-      chunkShift.x = re.quot ;
-    }
-    {
-      int expect = current.y + deltaCoords.y;
-      auto re      = quick_div(expect, kSizeY);
-      current.y    = re.rem  ;
-      chunkShift.y = re.quot ;
-    }
-
-    chunk.step(chunkShift);
+  ChunkCoords chunkShift;
+  if(int end = current.x + deltaCoords.x; end < kSizeX && end >=0) {
+    chunkShift.x = 0;
+    current.x = end;
+  } else {
+    // wrapping around the chunks
+    int expect = current.x + deltaCoords.x;
+    auto re      = std::div(expect, kSizeX);
+    current.x    = re.rem  + (expect < 0 ? kSizeX : 0);
+    chunkShift.x = re.quot + (expect < 0 ? -1 : 0);
   }
 
-  // update myself
-  blockIndex = current.toIndex();
+  if(int end = current.y + deltaCoords.y; end < kSizeY && end >=0) {
+    chunkShift.y = 0;
+    current.y = end;
+  } else {
+    // wrapping around the chunks
+    int expect = current.y + deltaCoords.y;
+    auto re      = std::div(expect, kSizeY);
+    current.y    = re.rem  + (expect < 0 ? kSizeY : 0);
+    chunkShift.y = re.quot + (expect < 0 ? -1 : 0);
+  }
 
-  block = &chunk->block(blockIndex);
+  chunk.step(chunkShift);
+
+  // update myself
+  blockCoords = current;
+  block = &chunk->block(blockCoords.toIndex());
 
 }
 
@@ -199,7 +210,7 @@ bool Chunk::BlockIter::valid() const {
   return chunk.valid();
 }
 
-Chunk::BlockIter Chunk::BlockIter::operator+(BlockCoords deltaCoords) const {
+Chunk::BlockIter Chunk::BlockIter::operator+(const BlockCoords& deltaCoords) const {
   BlockIter iter = *this;
   iter.step(deltaCoords);
   return iter;
@@ -217,14 +228,14 @@ Block* Chunk::BlockIter::operator->() const {
   return block;
 }
 
-Chunk::BlockIter::BlockIter(Chunk* c, BlockIndex idx)
-: chunk(c), blockIndex(idx) {
+Chunk::BlockIter::BlockIter(Chunk* c, BlockCoords crds)
+: chunk(c), blockCoords(crds) {
   if(chunk.valid()) {
-    block = &chunk->block(blockIndex);
+    block = &chunk->block(crds.toIndex());
   }
 }
 
-void Chunk::onInit(World* world) {
+void Chunk::onInit() {
   // SAFE_DELETE(mMesh);
   // mMesher.clear();
   // mMesher.setWindingOrder(WIND_CLOCKWISE);
@@ -235,15 +246,28 @@ void Chunk::onInit(World* world) {
 
   mIsDirty = true;
 
-  mOwner = world;
 
   // check 
   // if can load it from disk
 
   // if not, generate it
   generateBlocks();
-  // setting up neighbors
 
+}
+
+void Chunk::onUpdate() {
+
+}
+
+void Chunk::onDestroy() {
+  SAFE_DELETE(mMesh);
+
+  // try to save it to disk
+}
+
+void Chunk::onRegisterToWorld(World* world) {
+  mOwner = world;
+  
   // +x
   {
     Chunk* c = mOwner->findChunk(mCoords + ChunkCoords{1, 0});
@@ -273,25 +297,35 @@ void Chunk::onInit(World* world) {
   }
 }
 
-void Chunk::onUpdate() {
+void Chunk::onUnregisterFromWorld() {
+  if(mNeighbors[NEIGHBOR_POS_X] != nullptr) {
+    mNeighbors[NEIGHBOR_POS_X]->setNeighbor(NEIGHBOR_NEG_X, nullptr);
+  }
+  if(mNeighbors[NEIGHBOR_NEG_X] != nullptr) {
+    mNeighbors[NEIGHBOR_NEG_X]->setNeighbor(NEIGHBOR_POS_X, nullptr);
+  }
+  if(mNeighbors[NEIGHBOR_POS_Y] != nullptr) {
+    mNeighbors[NEIGHBOR_POS_Y]->setNeighbor(NEIGHBOR_NEG_Y, nullptr);
+  }
+  if(mNeighbors[NEIGHBOR_NEG_Y] != nullptr) {
+    mNeighbors[NEIGHBOR_NEG_Y]->setNeighbor(NEIGHBOR_POS_Y, nullptr);
+  }
 
-}
-
-void Chunk::onDestroy() {
-  SAFE_DELETE(mMesh);
-
-  // get rid of all connections to neighbors
-  // try to save it to disk
+  mOwner = nullptr;
 }
 
 void Chunk::generateBlocks() {
   float noises[kSizeX][kSizeY];
 
+  constexpr BlockIndex kWorldSeaLevel = 100;
+  constexpr int kChangeRange = (int(kSizeZ) - int(kWorldSeaLevel)) / 2;
+
   vec2 base = mCoords.pivotPosition().xy();
   for(uint i = 0; i < kSizeX; i++) {
     for(uint j = 0; j < kSizeY; j++) {
      vec2 worldPosition = vec2(i, j) + base;
-      noises[i][j] = Compute2dPerlinNoise(worldPosition.x , worldPosition.y, 100, 1);
+      float noise = Compute2dPerlinNoise(worldPosition.x , worldPosition.y, 200, 3);
+      noises[i][j] = float(kChangeRange) * noise + float(kWorldSeaLevel);
     }
   }
 
@@ -300,25 +334,28 @@ void Chunk::generateBlocks() {
   BlockDef* stone = BlockDef::get("stone");
   BlockDef* grass = BlockDef::get("grass");
 
-  for(int i = 0; i < (int)kTotalBlockCount; i++) {
+  BlockIndex m = 0;
+  for(int k = 0; k < kSizeZ; k++) {
+    for(int j = 0; j < kSizeY; j++) {
+      for(int i = 0; i < kSizeX; i++) {
 
-    constexpr BlockIndex kWorldSeaLevel = 100;
-    constexpr int kChangeRange = (int(kSizeZ) - int(kWorldSeaLevel)) / 2;
+        BlockCoords coords{i, j, k};
 
-    BlockCoords coords = BlockCoords::fromIndex((uint16_t)i);
+        float currentZMax = noises[coords.x][coords.y];
 
-    float noise = noises[coords.x][coords.y];
+        if(coords.z > currentZMax) {
+          mBlocks[m].reset(*air);
+        } else if(coords.z >= currentZMax - 1) {
+          mBlocks[m].reset(*grass);
+        } else if(coords.z >= currentZMax - 3) {
+          mBlocks[m].reset(*dust);
+        } else {
+          mBlocks[m].reset(*stone);
+        }
 
-    float currentZMax = float(kChangeRange) * noise + float(kWorldSeaLevel);
+        m++;
 
-    if(coords.z > currentZMax) {
-      mBlocks[i].reset(*air);
-    } else if(coords.z >= currentZMax - 1) {
-      mBlocks[i].reset(*grass);
-    } else if(coords.z >= currentZMax - 3) {
-      mBlocks[i].reset(*dust);
-    } else {
-      mBlocks[i].reset(*stone);
+      }
     }
   }
 }
@@ -344,7 +381,7 @@ bool Chunk::reconstructMesh() {
   // mIsDirty = false;
   // return true;
 
-  auto addBlock = [&](BlockIter block, vec3 pivot) {
+  auto addBlock = [&](const BlockIter& block1, const vec3& pivot1) {
 
     /*
      *     2 ----- 1
@@ -354,76 +391,80 @@ bool Chunk::reconstructMesh() {
      *   |/      |/             x  
      *   7 ----- 4         y___/
      */  
-    std::array<vec3, 8> vertices = {
-      vec3{ 0 + pivot.x, 0 + pivot.y, 1 + pivot.z },
-      vec3{ 1 + pivot.x, 0 + pivot.y, 1 + pivot.z },
-      vec3{ 1 + pivot.x, 1 + pivot.y, 1 + pivot.z },
-      vec3{ 0 + pivot.x, 1 + pivot.y, 1 + pivot.z },
+    std::array<vec3, 8> vertices1 = {
+      vec3{ 0 + pivot1.x, 0 + pivot1.y, 1 + pivot1.z },
+      vec3{ 1 + pivot1.x, 0 + pivot1.y, 1 + pivot1.z },
+      vec3{ 1 + pivot1.x, 1 + pivot1.y, 1 + pivot1.z },
+      vec3{ 0 + pivot1.x, 1 + pivot1.y, 1 + pivot1.z },
 
-      vec3{ 0 + pivot.x, 0 + pivot.y, 0 + pivot.z },     
-      vec3{ 1 + pivot.x, 0 + pivot.y, 0 + pivot.z },
-      vec3{ 1 + pivot.x, 1 + pivot.y, 0 + pivot.z },
-      vec3{ 0 + pivot.x, 1 + pivot.y, 0 + pivot.z },
+      vec3{ 0 + pivot1.x, 0 + pivot1.y, 0 + pivot1.z },     
+      vec3{ 1 + pivot1.x, 0 + pivot1.y, 0 + pivot1.z },
+      vec3{ 1 + pivot1.x, 1 + pivot1.y, 0 + pivot1.z },
+      vec3{ 0 + pivot1.x, 1 + pivot1.y, 0 + pivot1.z },
     };
 
-    const BlockDef& def = block->type();
 
+    const BlockDef& def1 = block1->type();
     
-    if(block->id() == 0) return;
+    if(block1->id() != 0) {
+      // sides
+      if(!block1.next({1, 0, 0})->opaque()) {
+        mMesher.quad(vertices1[5], vertices1[6], vertices1[2], vertices1[1],
+            def1.uvs(BlockDef::FACE_SIDE));
+      }
+      
+      if(!block1.next({-1, 0, 0})->opaque()) {
+        mMesher.quad(vertices1[7], vertices1[4], vertices1[0], vertices1[3],
+            def1.uvs(BlockDef::FACE_SIDE));
+      }
+      
+      if(!block1.next({0, -1, 0})->opaque()) {
+        mMesher.quad(vertices1[4], vertices1[5], vertices1[1], vertices1[0],
+            def1.uvs(BlockDef::FACE_SIDE));
+      }
 
+      // bottom
+      if(!block1.next({0, 0, -1})->opaque()) {
+        mMesher.quad(vertices1[4], vertices1[7], vertices1[6], vertices1[5],
+            def1.uvs(BlockDef::FACE_BTM));
+      }
+      
 
-
-    // sides
-    if(!block.next({1, 0, 0})->opaque()) {
-      mMesher.quad(vertices[5], vertices[6], vertices[2], vertices[1],
-          def.uvs(BlockDef::FACE_SIDE));
-    }
-    
-    if(!block.next({-1, 0, 0})->opaque()) {
-      mMesher.quad(vertices[7], vertices[4], vertices[0], vertices[3],
-          def.uvs(BlockDef::FACE_SIDE));
-    }
-    
-    if(!block.next({0, -1, 0})->opaque()) {
-      mMesher.quad(vertices[4], vertices[5], vertices[1], vertices[0],
-          def.uvs(BlockDef::FACE_SIDE));
-    }
-
-    // bottom
-    if(!block.next({0, 0, -1})->opaque()) {
-      mMesher.quad(vertices[4], vertices[7], vertices[6], vertices[5],
-          def.uvs(BlockDef::FACE_BTM));
-    }
-    
-
-    if(!block.next({0, 1, 0})->opaque()) {
-      mMesher.quad(vertices[6], vertices[7], vertices[3], vertices[2],
-          def.uvs(BlockDef::FACE_SIDE));
-    }
-    
-    // top
-    if(!block.next({0, 0, 1})->opaque()) {
-      mMesher.quad(vertices[0], vertices[1], vertices[2], vertices[3], 
-          def.uvs(BlockDef::FACE_TOP));
-    }
+      if(!block1.next({0, 1, 0})->opaque()) {
+        mMesher.quad(vertices1[6], vertices1[7], vertices1[3], vertices1[2],
+            def1.uvs(BlockDef::FACE_SIDE));
+      }
+      
+      // top
+      if(!block1.next({0, 0, 1})->opaque()) {
+        mMesher.quad(vertices1[0], vertices1[1], vertices1[2], vertices1[3], 
+            def1.uvs(BlockDef::FACE_TOP));
+      }
+    };
 
   };
   mMesher.reserve(kTotalBlockCount);
   mMesher.clear();
   mMesher.setWindingOrder(WIND_CLOCKWISE);
   mMesher.begin(DRAW_TRIANGES);
-  for(int i = 0; i < (int)kTotalBlockCount; i++) {
 
-    constexpr BlockIndex kWorldSeaLevel = 100;
-    constexpr int kChangeRange = (int(kSizeZ) - int(kWorldSeaLevel)) / 2;
 
-    BlockCoords coords = BlockCoords::fromIndex((uint16_t)i);
-    vec3 worldPosition = vec3(coords) + mCoords.pivotPosition();
+  constexpr BlockIndex kWorldSeaLevel = 100;
+  constexpr int kChangeRange = (int(kSizeZ) - int(kWorldSeaLevel)) / 2;
 
-    BlockIter iter = blockIter(i);
-    addBlock(iter, worldPosition);
+  for(int k = 0; k < kSizeZ - 1; k++) {
+    for(int j = 0; j < kSizeY; j++) {
+      for(int i = 0; i < kSizeX; i++) {
 
+        BlockCoords coords1{i, j, k};
+        vec3 worldPosition1 = vec3(coords1) + mCoords.pivotPosition();
+
+        BlockIter iter1 = blockIter(coords1);
+        addBlock(iter1, worldPosition1);
+      }
+    }
   }
+
   mMesher.end();
 
   mMesh = mMesher.createMesh<vertex_lit_t>();

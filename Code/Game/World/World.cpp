@@ -10,6 +10,7 @@
 #include "Game/World/Chunk.hpp"
 #include "Game/Utils/Config.hpp"
 #include "imgui/imgui_internal.h"
+#include "Engine/Input/Input.hpp"
 
 void World::onInit() {
 
@@ -47,6 +48,8 @@ void World::onInput() {
     // ImGui::SliderFloat("Light Intensity", &intensity, 0, 100);
     // ImGui::SliderFloat3("Light color", (float*)&color, 0, 1);
     // ImGui::End();
+    mCameraController.speedScale((Input::Get().isKeyDown(KEYBOARD_SHIFT) ? 100.f : 10.f));
+
     float scale = mCameraController.speedScale();
     vec3 camPosition = mCamera.transfrom().position();
     vec3 camRotation = mCamera.transfrom().localRotation();
@@ -78,9 +81,26 @@ void World::onRender(VoxelRenderer& renderer) const {
   renderer.onRenderFrame(*RHIDevice::get()->defaultRenderContext());
 }
 
+void World::onDestroy() {
+  std::vector<Chunk*> chunks;
+  chunks.reserve(mActiveChunks.size());
+
+  for(auto [_, chunk]: mActiveChunks) {
+    if(chunk != nullptr) {
+      chunks.push_back(chunk);
+    }
+  }
+
+  for(Chunk* c: chunks) {
+    c->onDestroy();
+    freeChunk(c);
+  }
+
+}
+
 bool World::activateChunk(ChunkCoords coords) {
   Chunk* chunk = allocChunk(coords);
-  chunk->onInit(this);
+  chunk->onInit();
   registerChunkToWorld(chunk);
   return true;
 }
@@ -104,6 +124,7 @@ void World::registerChunkToWorld(Chunk* chunk) {
   }
 #endif
 
+  chunk->onRegisterToWorld(this);
   mActiveChunks[chunk->coords()] = chunk;
 }
 
@@ -115,6 +136,9 @@ owner<Chunk*> World::unregisterChunkFromWorld(ChunkCoords coords) {
   Chunk* chunk = iter->second;
   iter->second = nullptr;
 
+  if(chunk != nullptr) {
+    chunk->onUnregisterFromWorld();
+  }
   return chunk;
 }
 

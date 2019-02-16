@@ -15,6 +15,7 @@ public:
   void onInput();
   void onUpdate();
   void onRender(VoxelRenderer& renderer) const;
+  void onDestroy();
 
   bool activateChunk(ChunkCoords coords);
   bool deactivateChunk(ChunkCoords coords);
@@ -31,7 +32,7 @@ protected:
   void manageChunks();
 
   vec3 playerPosition();
-  std::map<ChunkCoords, Chunk*> mActiveChunks;
+  std::unordered_map<ChunkCoords, Chunk*> mActiveChunks;
   Camera mCamera;
   CameraController mCameraController;
 
