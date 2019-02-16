@@ -19,6 +19,7 @@ public:
   bool activateChunk(ChunkCoords coords);
   bool deactivateChunk(ChunkCoords coords);
 
+  Chunk* findChunk(ChunkCoords coords);
 protected:
 
   Chunk* allocChunk(ChunkCoords coords) { return new Chunk(coords); }
@@ -26,7 +27,6 @@ protected:
   void registerChunkToWorld(Chunk* chunk);
   owner<Chunk*> unregisterChunkFromWorld(ChunkCoords coords);
 
-  Chunk* findChunk(ChunkCoords coords);
   void updateChunks();
   void manageChunks();
 

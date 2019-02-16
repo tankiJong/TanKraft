@@ -7,18 +7,26 @@
 #include "Engine/Graphics/Model/Mesher.hpp"
 
 class Mesh;
+class World;
+class ChunkCoords;
 struct aabb3;
 
 using BlockIndex = uint16_t;
+
 
 class BlockCoords: public ivec3 {
 public:
   using ivec3::ivec3;
 
-  vec3 centerPosition() const { return vec3{};};
+  BlockCoords(const ivec3& copy): ivec3(copy) {}
+  operator ivec3&() { return *this;}
+  operator const ivec3&() const { return *this; }
+
+  vec3 centerPosition() const;
   BlockIndex toIndex() const;
 
   static BlockCoords fromIndex(BlockIndex index);;
+  static BlockIndex  stepIndex(BlockIndex index, BlockCoords delta, ChunkCoords* outChunkShift);
 };
 
 class ChunkCoords: public ivec2 {
@@ -26,7 +34,8 @@ public:
   using ivec2::ivec2;
   using ivec2::operator=;
 
-  ChunkCoords(const ivec2& copy): ivec2(copy) {}
+  ChunkCoords() {};
+  ChunkCoords(const ivec2& copy): ivec2(copy) {};
   bool operator>(const ChunkCoords& rhs) const;
   bool operator<(const ChunkCoords& rhs) const {
     return !(*this > rhs || *this == rhs);
@@ -56,7 +65,58 @@ public:
 
   Chunk(ChunkCoords coords): mCoords(std::move(coords)) {}
 
-  void onInit();
+  enum eNeighbor: uint8_t {
+    NEIGHBOR_POS_X,
+    NEIGHBOR_NEG_X,
+    NEIGHBOR_POS_Y,
+    NEIGHBOR_NEG_Y,
+
+    NUM_NEIGHBOR,
+  };
+
+  class Iterator {
+    friend class Chunk;
+
+  public:
+
+    void step(eNeighbor dir);
+    void step(ChunkCoords deltaCoords);
+    Iterator operator+(ChunkCoords deltaCoords) const;
+
+    bool valid() const { return self != nullptr; }
+
+    Chunk* operator->() const { return self; }
+    Chunk& operator*() const { return *self; }
+
+    bool operator==(const Iterator& rhs) const { return self == rhs.self; }
+    bool operator!=(const Iterator& rhs) const { return self != rhs.self; }
+  protected:
+    Iterator(Chunk* chunk): self(chunk) {}
+    Chunk* self = nullptr;
+
+  };
+
+  class BlockIter {
+    friend class Chunk;
+
+  public:
+    BlockIter next(BlockCoords deltaCoords) const;
+    void step(BlockCoords deltaCoords);
+    bool valid() const;
+    BlockIter operator+(BlockCoords deltaCoords) const;
+
+    Block& operator*() const;
+    Block* operator->() const;
+
+  protected:
+    BlockIter(Chunk* c, BlockIndex idx);
+
+    Iterator chunk;
+    BlockIndex blockIndex;
+    Block* block = nullptr;
+  };
+
+  void onInit(World* world);
   void onUpdate();
 
   Mesh* mesh() const { return mMesh; }
@@ -65,17 +125,26 @@ public:
   ChunkCoords coords() const { return mCoords; };
 
   aabb3 bounds();
+  Block& block(BlockIndex index) { return mBlocks[index]; }
 
   bool isDirty() const { return mIsDirty; }
 
-  void reconstructMesh();
+  bool reconstructMesh();
+
+  Iterator iterator();
+  BlockIter blockIter(BlockIndex index) { return { this, index }; };
+  Iterator neighbor(eNeighbor loc) const { return { mNeighbors[loc] }; }
+
+  void setNeighbor(eNeighbor loc, Chunk* chunk) { mNeighbors[loc] = chunk; }
 protected:
 
   void generateBlocks();
-
+  bool neighborsLoaded() const;
   Block mBlocks[kTotalBlockCount]; // 0xffff
   ChunkCoords mCoords;
+  std::array<Chunk*, NUM_NEIGHBOR> mNeighbors;
   Mesh* mMesh = nullptr;
   Mesher mMesher;
   bool mIsDirty = true;
+  World* mOwner;
 };

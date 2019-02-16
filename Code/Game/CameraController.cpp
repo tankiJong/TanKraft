@@ -103,7 +103,7 @@ void CameraController::onUpdate(float dt) {
   // mCamera.transfrom().localRotation() = vec3::zero;
 
   // antanuation
-  mMoveSpeed = mMoveSpeed * .9f;
+  mMoveSpeed = mMoveSpeed * ( 1 - .98f * dt);
   mForce *= 0.f;
   
   mAngularSpeed = mAngularSpeed * .0f;

@@ -1,6 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Breakable_Release|Win32">
+      <Configuration>Breakable_Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Breakable_Release|x64">
+      <Configuration>Breakable_Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="DebugInline|Win32">
       <Configuration>DebugInline</Configuration>
       <Platform>Win32</Platform>
@@ -19,6 +27,14 @@
     </ProjectConfiguration>
     <ProjectConfiguration Include="FaskBreak|x64">
       <Configuration>FaskBreak</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="FastBreak|Win32">
+      <Configuration>FastBreak</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="FastBreak|x64">
+      <Configuration>FastBreak</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
@@ -62,6 +78,20 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FastBreak|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
@@ -82,6 +112,20 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FastBreak|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
@@ -109,6 +153,12 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='FastBreak|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -119,6 +169,12 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='FastBreak|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='FaskBreak|x64'" Label="PropertySheets">
@@ -164,6 +220,20 @@
     <CustomBuildBeforeTargets>PreBuildEvent</CustomBuildBeforeTargets>
     <IncludePath>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</IntDir>
+    <CustomBuildBeforeTargets>PreBuildEvent</CustomBuildBeforeTargets>
+    <IncludePath>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FastBreak|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</IntDir>
+    <CustomBuildBeforeTargets>PreBuildEvent</CustomBuildBeforeTargets>
+    <IncludePath>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include;$(IncludePath)</IncludePath>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</OutDir>
@@ -172,6 +242,20 @@
     <IncludePath>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</IntDir>
+    <CustomBuildBeforeTargets>PreBuildEvent</CustomBuildBeforeTargets>
+    <IncludePath>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</IntDir>
+    <CustomBuildBeforeTargets>PreBuildEvent</CustomBuildBeforeTargets>
+    <IncludePath>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FastBreak|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\</IntDir>
@@ -499,6 +583,134 @@ exit/B %errlev%</Command>
       <AdditionalIncludeDirectories>$(SolutionDir)..\..\Engine\Code\Engine\Renderer\Shader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </FxCompile>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>MORPH_D3D12;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(SolutionDir)../../Engine/Code/;$(SolutionDir)../../Engine/Code/ThirdParty/;$(SolutionDir)Code/</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <DisableSpecificWarnings>4201</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)../../Engine/Code/;$(SolutionDir)Code/</AdditionalLibraryDirectories>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y /F /I "$(TargetPath)" "$(SolutionDir)Run_Win32"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying $(TargetFileName) to Run_Win32..</Message>
+    </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>
+      </Message>
+    </PreBuildEvent>
+    <CustomBuildStep>
+      <Command>set/A errlev="%ERRORLEVEL% &amp; 24"
+robocopy "$(SolutionDir)..\..\Engine\Code\Content" "$(SolutionDir)Run_Win32\Engine" /s /e
+exit/B %errlev%</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>Copy engine resource files into Build folder</Message>
+      <Outputs>foo.file</Outputs>
+    </CustomBuildStep>
+    <CustomBuild>
+      <Command>copy %(Identity) "$(SolutionDir)Run_Win32\" &gt; NUL</Command>
+    </CustomBuild>
+    <CustomBuild>
+      <Outputs>$(OutDir)\%(Identity)</Outputs>
+    </CustomBuild>
+    <CustomBuild>
+      <TreatOutputAsContent>true</TreatOutputAsContent>
+    </CustomBuild>
+    <FxCompile>
+      <AllResourcesBound>true</AllResourcesBound>
+      <EnableUnboundedDescriptorTables>false</EnableUnboundedDescriptorTables>
+      <ShaderModel>6.1</ShaderModel>
+      <VariableName>g%(Filename)</VariableName>
+      <HeaderFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include\%(RelativeDir)\%(Filename).h</HeaderFileOutput>
+      <ObjectFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\bin\%(RelativeDir)\%(Filename).cso</ObjectFileOutput>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\Engine\Code\Engine\Renderer\Shader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </FxCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FastBreak|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>MORPH_D3D12;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(SolutionDir)../../Engine/Code/;$(SolutionDir)../../Engine/Code/ThirdParty/;$(SolutionDir)Code/</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <DisableSpecificWarnings>4201</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)../../Engine/Code/;$(SolutionDir)Code/</AdditionalLibraryDirectories>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y /F /I "$(TargetPath)" "$(SolutionDir)Run_Win32"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying $(TargetFileName) to Run_Win32..</Message>
+    </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>
+      </Message>
+    </PreBuildEvent>
+    <CustomBuildStep>
+      <Command>set/A errlev="%ERRORLEVEL% &amp; 24"
+robocopy "$(SolutionDir)..\..\Engine\Code\Content" "$(SolutionDir)Run_Win32\Engine" /s /e
+exit/B %errlev%</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>Copy engine resource files into Build folder</Message>
+      <Outputs>foo.file</Outputs>
+    </CustomBuildStep>
+    <CustomBuild>
+      <Command>copy %(Identity) "$(SolutionDir)Run_Win32\" &gt; NUL</Command>
+    </CustomBuild>
+    <CustomBuild>
+      <Outputs>$(OutDir)\%(Identity)</Outputs>
+    </CustomBuild>
+    <CustomBuild>
+      <TreatOutputAsContent>true</TreatOutputAsContent>
+    </CustomBuild>
+    <FxCompile>
+      <AllResourcesBound>true</AllResourcesBound>
+      <EnableUnboundedDescriptorTables>false</EnableUnboundedDescriptorTables>
+      <ShaderModel>6.1</ShaderModel>
+      <VariableName>g%(Filename)</VariableName>
+      <HeaderFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include\%(RelativeDir)\%(Filename).h</HeaderFileOutput>
+      <ObjectFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\bin\%(RelativeDir)\%(Filename).cso</ObjectFileOutput>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\Engine\Code\Engine\Renderer\Shader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </FxCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'">
     <ClCompile>
       <PrecompiledHeader>
@@ -564,6 +776,135 @@ exit/B %errlev%</Command>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>MORPH_D3D12;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(SolutionDir)../../Engine/Code/;$(SolutionDir)../../Engine/Code/ThirdParty/;$(SolutionDir)Code/</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <DisableSpecificWarnings>4201</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)../../Engine/Code/;$(SolutionDir)Code/</AdditionalLibraryDirectories>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y /F /I "$(TargetPath)" "$(SolutionDir)Run_Win32"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying $(TargetFileName) to Run_Win32..</Message>
+    </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>
+      </Message>
+    </PreBuildEvent>
+    <CustomBuildStep>
+      <Command>set/A errlev="%ERRORLEVEL% &amp; 24"
+robocopy "$(SolutionDir)..\..\Engine\Code\Content" "$(SolutionDir)Run_Win32\Engine" /s /e
+exit/B %errlev%</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>Copy engine resource files into Build folder</Message>
+      <Outputs>foo.file</Outputs>
+    </CustomBuildStep>
+    <CustomBuild>
+      <Command>copy %(Identity) "$(SolutionDir)Run_Win32\" &gt; NUL</Command>
+    </CustomBuild>
+    <CustomBuild>
+      <Outputs>$(OutDir)\%(Identity)</Outputs>
+    </CustomBuild>
+    <CustomBuild>
+      <TreatOutputAsContent>true</TreatOutputAsContent>
+    </CustomBuild>
+    <FxCompile>
+      <ShaderModel>6.1</ShaderModel>
+      <AllResourcesBound>true</AllResourcesBound>
+      <EnableUnboundedDescriptorTables>false</EnableUnboundedDescriptorTables>
+      <VariableName>g%(Filename)</VariableName>
+      <HeaderFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include\%(RelativeDir)\%(Filename).h</HeaderFileOutput>
+      <ObjectFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\bin\%(RelativeDir)\%(Filename).cso</ObjectFileOutput>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\Engine\Code\Engine\Renderer\Shader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </FxCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>MORPH_D3D12;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(SolutionDir)../../Engine/Code/;$(SolutionDir)../../Engine/Code/ThirdParty/;$(SolutionDir)Code/</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <DisableSpecificWarnings>4201</DisableSpecificWarnings>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)../../Engine/Code/;$(SolutionDir)Code/</AdditionalLibraryDirectories>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y /F /I "$(TargetPath)" "$(SolutionDir)Run_Win32"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying $(TargetFileName) to Run_Win32..</Message>
+    </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>
+      </Message>
+    </PreBuildEvent>
+    <CustomBuildStep>
+      <Command>set/A errlev="%ERRORLEVEL% &amp; 24"
+robocopy "$(SolutionDir)..\..\Engine\Code\Content" "$(SolutionDir)Run_Win32\Engine" /s /e
+exit/B %errlev%</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>Copy engine resource files into Build folder</Message>
+      <Outputs>foo.file</Outputs>
+    </CustomBuildStep>
+    <CustomBuild>
+      <Command>copy %(Identity) "$(SolutionDir)Run_Win32\" &gt; NUL</Command>
+    </CustomBuild>
+    <CustomBuild>
+      <Outputs>$(OutDir)\%(Identity)</Outputs>
+    </CustomBuild>
+    <CustomBuild>
+      <TreatOutputAsContent>true</TreatOutputAsContent>
+    </CustomBuild>
+    <FxCompile>
+      <ShaderModel>6.1</ShaderModel>
+      <AllResourcesBound>true</AllResourcesBound>
+      <EnableUnboundedDescriptorTables>false</EnableUnboundedDescriptorTables>
+      <VariableName>g%(Filename)</VariableName>
+      <HeaderFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\include\%(RelativeDir)\%(Filename).h</HeaderFileOutput>
+      <ObjectFileOutput>$(SolutionDir)Temporary\$(ProjectName)_$(PlatformName)_$(Configuration)\CompiledShader\bin\%(RelativeDir)\%(Filename).cso</ObjectFileOutput>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\Engine\Code\Engine\Renderer\Shader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </FxCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FastBreak|x64'">
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
@@ -729,48 +1070,68 @@ exit/B %errlev%</Command>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FastBreak|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FastBreak|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="VoxelRenderer\DeferredShading_vs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FastBreak|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FastBreak|x64'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="VoxelRenderer\GenGBuffer_ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FastBreak|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FastBreak|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="VoxelRenderer\GenGBuffer_vs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FastBreak|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FastBreak|x64'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="VoxelRenderer\SSAO_cs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|x64'">Compute</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FastBreak|x64'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|x64'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|Win32'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Breakable_Release|Win32'">Compute</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='FastBreak|Win32'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|Win32'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|x64'">Compute</ShaderType>
     </FxCompile>

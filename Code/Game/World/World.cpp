@@ -23,7 +23,7 @@ void World::onInit() {
 
   // TODO: look at is buggy
   // mCamera.lookAt({ -3, -3, 3 }, { 0, 0, 0 }, {0, 0, 1});
-  mCamera.setProjectionPrespective(70, 3.f*CLIENT_ASPECT, 3.f, 0.100000f, Config::kMinDeactivateDistance * 1.4f);
+  mCamera.setProjectionPrespective(70, 3.f*CLIENT_ASPECT, 3.f, 0.100000f, Config::kMaxActivateDistance);
  
   mCameraController.speedScale(10);
 
@@ -80,7 +80,7 @@ void World::onRender(VoxelRenderer& renderer) const {
 
 bool World::activateChunk(ChunkCoords coords) {
   Chunk* chunk = allocChunk(coords);
-  chunk->onInit();
+  chunk->onInit(this);
   registerChunkToWorld(chunk);
   return true;
 }
@@ -156,8 +156,9 @@ void World::manageChunks() {
 
     Chunk* chunk = findChunk(coords);
     if(chunk != nullptr && chunk->isDirty()) {
-      chunk->reconstructMesh();
-      reconstructedMeshCount++;
+      if(chunk->reconstructMesh()) {
+        reconstructedMeshCount++;
+      }
     }
 
     if(reconstructedMeshCount == Config::kMaxChunkReconstructMeshPerFrame) break;
@@ -187,15 +188,16 @@ void World::reconstructChunkVisitingPattern() {
 
   int activateChunkDist = (int)floor(Config::kMaxActivateDistance / float(max(Chunk::kSizeY, Chunk::kSizeX)));
 
+  int activateChunkDist2 = activateChunkDist * activateChunkDist;
   EXPECTS(halfRange > 0);
 
-  sChunkActivationVisitingPattern.reserve(halfRange * 2);
-  sChunkDeactivationVisitingPattern.reserve(halfRange * 2);
+  sChunkActivationVisitingPattern.reserve(halfRange * halfRange);
+  sChunkDeactivationVisitingPattern.reserve(halfRange * halfRange);
 
   for(int j = -halfRange; j < halfRange; ++j) {
     for(int i = -halfRange; i < halfRange; ++i) {
       ivec2 coord{i, j};
-      if(coord.magnitude2() <= activateChunkDist) {
+      if(coord.magnitude2() <= activateChunkDist2) {
         sChunkActivationVisitingPattern.emplace_back(coord);
       } else {
         sChunkDeactivationVisitingPattern.emplace_back(coord);
