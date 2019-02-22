@@ -11,6 +11,8 @@
 #include "Game/Utils/Config.hpp"
 #include "imgui/imgui_internal.h"
 #include "Engine/Input/Input.hpp"
+#include "Engine/Math/Primitives/ray3.hpp"
+#include "Engine/Physics/contact3.hpp"
 
 void World::onInit() {
 
@@ -19,7 +21,7 @@ void World::onInit() {
   mCamera.setCoordinateTransform(gGameCoordsTransform);
   // mCamera.transfrom().setCoordinateTransform(gGameCoordsTransform);
   mCamera.transfrom().setRotationOrder(ROTATION_YZX);
-  mCamera.transfrom().localPosition() = vec3{-10,0,120};
+  mCamera.transfrom().localPosition() = vec3{-10,1,120};
   mCamera.transfrom().localRotation() = vec3{0,0,0};
 
   // TODO: look at is buggy
@@ -31,12 +33,6 @@ void World::onInit() {
   Debug::setCamera(&mCamera);
   Debug::setDepth(Debug::DEBUG_DEPTH_DISABLE);
   Debug::drawBasis(Transform());
-
-  // activateChunk({0,0});
-  // activateChunk({-1,2});
-  // activateChunk({0,3});
-  // activateChunk({0,2});
-  // activateChunk({1,2});
 }
 
 void World::onInput() {
@@ -44,21 +40,51 @@ void World::onInput() {
   mCameraController.onInput();
 
   {
-    // ImGui::Begin("Light Control");
-    // ImGui::SliderFloat("Light Intensity", &intensity, 0, 100);
-    // ImGui::SliderFloat3("Light color", (float*)&color, 0, 1);
-    // ImGui::End();
     mCameraController.speedScale((Input::Get().isKeyDown(KEYBOARD_SHIFT) ? 100.f : 10.f));
 
     float scale = mCameraController.speedScale();
     vec3 camPosition = mCamera.transfrom().position();
     vec3 camRotation = mCamera.transfrom().localRotation();
-    ImGui::Begin("Camera Control");
+    ImGui::Begin("Control");
+    ImGui::Checkbox("Enable raycast", &mEnableRaycast);
     ImGui::SliderFloat("Camera speed", &scale, 1, 500, "%0.f", 10);
     ImGui::SliderFloat3("Camera Position", (float*)&camPosition, 0, 10);
     ImGui::SliderFloat3("Camera Rotation", (float*)&mCamera.transfrom().localRotation(), -360, 360);
     ImGui::End();
     mCameraController.speedScale(scale);
+  }
+
+  if(Input::Get().isKeyJustDown('R')) {
+    mEnableRaycast = !mEnableRaycast;
+  }
+
+  if(Input::Get().isKeyJustDown(MOUSE_LBUTTON)) {
+    if(mPlayerRaycast.impacted()) {
+      BlockDef* air = BlockDef::get(0);
+      mPlayerRaycast.contact.block.reset(*air);
+    }
+  }
+
+  if(Input::Get().isKeyJustDown(MOUSE_RBUTTON)) {
+    if(mPlayerRaycast.impacted() && mPlayerRaycast.contact.distance > 0) {
+      BlockDef* stone = BlockDef::get("stone");
+      mPlayerRaycast.contact.block.next(mPlayerRaycast.contact.normal).reset(*stone);
+    }
+  }
+
+  if(Input::Get().isKeyJustDown('U')) {
+    std::vector<ChunkCoords> chunks;
+    chunks.reserve(mActiveChunks.size());
+
+    for(const auto& [coords, chunk]: mActiveChunks) {
+      if(chunk != nullptr) {
+        chunks.push_back(coords);
+      }
+    }
+
+    for(ChunkCoords& c: chunks) {
+      deactivateChunk(c);
+    }
   }
 }
 
@@ -68,6 +94,84 @@ void World::onUpdate() {
 
   updateChunks();
   manageChunks();
+
+  if(mEnableRaycast) {
+    mPlayerRaycast = raycast(mCamera.transfrom().position(), 
+                              mCamera.transfrom().right().normalized(), 8);
+  } else {
+    Debug::setDepth(Debug::eDebugDrawDepthMode::DEBUG_DEPTH_DISABLE);
+    if(mPlayerRaycast.impacted()) {
+      Debug::drawLine(mPlayerRaycast.start, mPlayerRaycast.end,
+                      1, 0, Rgba::gray, Rgba(50, 50, 50));
+      Debug::drawPoint(mPlayerRaycast.contact.position, 0.2f, 0, Rgba(128, 0, 0));
+      Debug::setDepth(Debug::eDebugDrawDepthMode::DEBUG_DEPTH_ENABLE);
+      Debug::drawLine(mPlayerRaycast.start, mPlayerRaycast.contact.position,
+                      1, 0, Rgba::red, Rgba::white);
+      Debug::drawPoint(mPlayerRaycast.contact.position, 0.2f, 0, Rgba::red);
+    } else {
+      Debug::drawLine(mPlayerRaycast.start, mPlayerRaycast.end,
+                      1, 0, Rgba::green, Rgba::green);
+    }
+
+    Debug::setDepth(Debug::eDebugDrawDepthMode::DEBUG_DEPTH_ENABLE);
+  }
+
+  // Debug::drawPoint(mCamera.transfrom().position() + mCamera.transfrom().right(), .03f, 0);
+  Debug::drawBasis(mCamera.transfrom().position() + mCamera.transfrom().right(),
+                   vec3::right * .05f, vec3::up * .05f, vec3::forward * .05f, 0);
+  if(mPlayerRaycast.impacted()) {
+    Debug::setDepth(Debug::eDebugDrawDepthMode::DEBUG_DEPTH_ENABLE);
+
+    aabb3 innerbounds = mPlayerRaycast.contact.block.bounds();
+    innerbounds = { innerbounds.mins - vec3{.03f}, innerbounds.maxs + vec3{.03f}};
+    Debug::drawCube(innerbounds, mat44::identity, true, 0, Rgba::white);
+
+    {
+     
+      /*
+       *     2 ----- 1
+       *    /|      /|
+       *   3 ----- 0 |
+       *   | 6 ----|-5
+       *   |/      |/             x  
+       *   7 ----- 4         y___/
+       */  
+      vec3 v[8] = {
+        vec3{ innerbounds.mins.x, innerbounds.mins.y, innerbounds.maxs.z },
+        vec3{ innerbounds.maxs.x, innerbounds.mins.y, innerbounds.maxs.z },
+        vec3{ innerbounds.maxs.x, innerbounds.maxs.y, innerbounds.maxs.z },
+        vec3{ innerbounds.mins.x, innerbounds.maxs.y, innerbounds.maxs.z },
+
+        vec3{ innerbounds.mins.x, innerbounds.mins.y, innerbounds.mins.z },
+        vec3{ innerbounds.maxs.x, innerbounds.mins.y, innerbounds.mins.z },
+        vec3{ innerbounds.maxs.x, innerbounds.maxs.y, innerbounds.mins.z },
+        vec3{ innerbounds.mins.x, innerbounds.maxs.y, innerbounds.mins.z },
+      };
+
+      Rgba tintColor(50, 20, 20);
+      if(mPlayerRaycast.contact.normal.x == 1) {
+        Debug::drawQuad(v[5], v[6], v[2], v[1], 0, tintColor);
+      }
+      if(mPlayerRaycast.contact.normal.x == -1) {
+        Debug::drawQuad(v[7], v[4], v[0], v[3], 0, tintColor);
+      }
+      if(mPlayerRaycast.contact.normal.y == 1) {
+        Debug::drawQuad(v[6], v[7], v[3], v[2], 0, tintColor);
+      }
+      if(mPlayerRaycast.contact.normal.y == -1) {
+        Debug::drawQuad(v[5], v[4], v[0], v[1], 0, tintColor);
+      }
+      if(mPlayerRaycast.contact.normal.z == 1) {
+        Debug::drawQuad(v[3], v[0], v[1], v[2], 0, tintColor);
+      }
+      if(mPlayerRaycast.contact.normal.z == -1) {
+        Debug::drawQuad(v[6], v[5], v[4], v[7], 0, tintColor);
+      }
+    }
+    Debug::setDepth(Debug::eDebugDrawDepthMode::DEBUG_DEPTH_DISABLE);
+
+  }
+
 }
 
 void World::onRender(VoxelRenderer& renderer) const {
@@ -79,13 +183,14 @@ void World::onRender(VoxelRenderer& renderer) const {
   }
 
   renderer.onRenderFrame(*RHIDevice::get()->defaultRenderContext());
+  renderer.onRenderGui(*RHIDevice::get()->defaultRenderContext());
 }
 
 void World::onDestroy() {
   std::vector<Chunk*> chunks;
   chunks.reserve(mActiveChunks.size());
 
-  for(auto [_, chunk]: mActiveChunks) {
+  for(const auto& [_, chunk]: mActiveChunks) {
     if(chunk != nullptr) {
       chunks.push_back(chunk);
     }
@@ -98,14 +203,14 @@ void World::onDestroy() {
 
 }
 
-bool World::activateChunk(ChunkCoords coords) {
+bool World::activateChunk(const ChunkCoords coords) {
   Chunk* chunk = allocChunk(coords);
   chunk->onInit();
   registerChunkToWorld(chunk);
   return true;
 }
 
-bool World::deactivateChunk(ChunkCoords coords) {
+bool World::deactivateChunk(const ChunkCoords coords) {
   Chunk* chunk = unregisterChunkFromWorld(coords);
   if(chunk == nullptr) {
     return false;
@@ -128,7 +233,7 @@ void World::registerChunkToWorld(Chunk* chunk) {
   mActiveChunks[chunk->coords()] = chunk;
 }
 
-owner<Chunk*> World::unregisterChunkFromWorld(ChunkCoords coords) {
+owner<Chunk*> World::unregisterChunkFromWorld(const ChunkCoords& coords) {
   auto iter = mActiveChunks.find(coords);
   if(iter == mActiveChunks.end()) {
     return nullptr;
@@ -142,9 +247,79 @@ owner<Chunk*> World::unregisterChunkFromWorld(ChunkCoords coords) {
   return chunk;
 }
 
-Chunk* World::findChunk(ChunkCoords coords) {
-  auto iter = mActiveChunks.find(coords);
+Chunk* World::findChunk(const ChunkCoords& coords) {
+  const auto iter = mActiveChunks.find(coords);
   return iter == mActiveChunks.end() ? nullptr : iter->second;
+}
+
+const Chunk* World::findChunk(const ChunkCoords& coords) const {
+  return const_cast<World*>(this)->findChunk(coords);
+}
+
+Chunk* World::findChunk(const vec3& worldPosition) {
+
+  ChunkCoords coords = ChunkCoords::fromWorld(worldPosition);
+  return findChunk(coords);
+
+}
+
+World::raycast_result_t World::raycast(const vec3& start, const vec3& dir, float maxDist) {
+  constexpr float kRaycastStepSize = 0.01f;
+  raycast_result_t result;
+
+  result.start = start;
+  result.end = start + dir * maxDist;
+  result.dir = dir;
+  result.maxDist = maxDist;
+
+  Chunk* chunk = findChunk(start);
+
+  // fail to find the chunk
+  if(chunk == nullptr) return result;
+
+  // found chunk, start ray casting
+
+  Chunk::BlockIter prev = chunk->blockIter(start);
+  // hit start block
+  if(Input::Get().isKeyJustDown('Z')) {
+    Debug::drawCube(prev.bounds(), mat44::identity, true);
+  }
+  if(prev->opaque()) {
+    result.contact = { start, -dir, 0, 0, prev };
+    return result;
+  }
+
+  aabb3 prevBounds = prev.bounds();
+  for(float dist = kRaycastStepSize; dist <= maxDist; dist += kRaycastStepSize) {
+
+    vec3 currentPos = start + dist * dir;
+
+    if(prevBounds.contains(currentPos)) continue;
+
+    if(!chunk->bounds().contains(currentPos)) {
+      chunk = findChunk(currentPos);
+    }
+
+    Chunk::BlockIter next = chunk->blockIter(currentPos);
+    aabb3 bounds = next.bounds();
+
+    if(next->opaque()) {
+      ray3 ray {start, dir};
+      contact3 c = ray.intersect(bounds);
+
+      result.contact = { 
+        c.position, c.normal, 
+        dist / maxDist, dist, next };
+      return result;
+    }
+
+    prev = next;
+    prevBounds = bounds;
+
+  }
+
+  // else missed
+  return result;
 }
 
 void World::updateChunks() {
@@ -160,9 +335,9 @@ void World::manageChunks() {
   uint activatedChunkCount = 0;
   ChunkCoords playerChunkCoords = ChunkCoords::fromWorld(playerPosition());
   
-  for(auto idx = sChunkActivationVisitingPattern.begin(); idx != sChunkActivationVisitingPattern.end(); ++idx) {
+  for(ChunkCoords& idx: sChunkActivationVisitingPattern) {
   
-    ChunkCoords coords = playerChunkCoords + *idx;
+    ChunkCoords coords = playerChunkCoords + idx;
   
     Chunk* chunk = findChunk(coords);
     if(chunk == nullptr) {
@@ -174,9 +349,9 @@ void World::manageChunks() {
   }
 
   uint reconstructedMeshCount = 0;
-  for(auto idx = sChunkActivationVisitingPattern.begin(); idx != sChunkActivationVisitingPattern.end(); ++idx) {
+  for(ChunkCoords& idx: sChunkActivationVisitingPattern) {
 
-    ChunkCoords coords = playerChunkCoords + *idx;
+    ChunkCoords coords = playerChunkCoords + idx;
 
     Chunk* chunk = findChunk(coords);
     if(chunk != nullptr && chunk->isDirty()) {
@@ -189,9 +364,9 @@ void World::manageChunks() {
   }
 
   uint deactivatedChunkCount = 0;
-  for(auto idx = sChunkDeactivationVisitingPattern.begin(); idx != sChunkDeactivationVisitingPattern.end(); ++idx) {
+  for(ChunkCoords& idx: sChunkDeactivationVisitingPattern) {
   
-    ChunkCoords coords = playerChunkCoords + *idx;
+    ChunkCoords coords = playerChunkCoords + idx;
     if(deactivateChunk(coords)) {
       deactivatedChunkCount++;
     }
@@ -207,10 +382,11 @@ vec3 World::playerPosition() {
 
 std::vector<ChunkCoords> World::sChunkActivationVisitingPattern{};
 std::vector<ChunkCoords> World::sChunkDeactivationVisitingPattern{};
-void World::reconstructChunkVisitingPattern() {
-  int halfRange = (int)floor(Config::kMinDeactivateDistance / float(max(Chunk::kSizeY, Chunk::kSizeX)));
 
-  int activateChunkDist = (int)floor(Config::kMaxActivateDistance / float(max(Chunk::kSizeY, Chunk::kSizeX)));
+void World::reconstructChunkVisitingPattern() {
+  int halfRange = (int)floor(Config::kMinDeactivateDistance / float(std::max(Chunk::kSizeY, Chunk::kSizeX)));
+
+  int activateChunkDist = (int)floor(Config::kMaxActivateDistance / float(std::max(Chunk::kSizeY, Chunk::kSizeX)));
 
   int activateChunkDist2 = activateChunkDist * activateChunkDist;
   EXPECTS(halfRange > 0);

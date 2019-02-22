@@ -22,6 +22,7 @@
 #include "Game/VoxelRenderer/VoxelRenderer.hpp"
 #include "Game/GameCommon.hpp"
 #include "Game/World/World.hpp"
+#include "Game/Utils/FileCache.hpp"
 
 #define SCENE_BUNNY
 // #define SCENE_1
@@ -95,6 +96,8 @@ void GameApplication::onInit() {
 
   // sceneRenderer->setCamera(*mCamera);
   sceneRenderer->onLoad(*mContext);
+
+  FileCache::get().init();
 
   mWorld = new World();
   mWorld->onInit();

@@ -7,6 +7,7 @@
 #include "imgui/ImGuizmo.h"
 #include "Engine/Gui/ImGui.hpp"
 #include "Engine/Debug/Log.hpp"
+#include "Engine/Core/Time/Clock.hpp"
 
 static const vec3 MAX_ACCELERATION{ 1.f };
 
@@ -52,12 +53,12 @@ void CameraController::onInput() {
 
   if (Input::Get().isKeyDown(MOUSE_MBUTTON)) {
     vec2 deltaMouse = Input::Get().mouseDeltaPosition();
-    addForce(-mCamera.transfrom().right() * deltaMouse.x);
-    addForce(mCamera.transfrom().up() * deltaMouse.y);
+    addForce(-mCamera.transfrom().right() * deltaMouse.x / (float)GetMainClock().frame.second);
+    addForce(mCamera.transfrom().up() * deltaMouse.y / (float)GetMainClock().frame.second);
   }
   // if(Input::Get().isKeyDown(MOUSE_RBUTTON)) {
   vec2 deltaMouse = Input::Get().mouseDeltaPosition(true);
-  addAngularForce(deltaMouse * 500000);
+  addAngularForce(deltaMouse * 1000.f / (float)GetMainClock().frame.second);
   // }
 
 
@@ -76,7 +77,7 @@ void CameraController::onUpdate(float dt) {
 
   {
     vec2 angularAcce = mAngularForce;
-    clamp(angularAcce, -MAX_ANGULAR_ACCELERATION, MAX_ANGULAR_ACCELERATION);
+    // clamp(angularAcce, -MAX_ANGULAR_ACCELERATION, MAX_ANGULAR_ACCELERATION);
 
     mAngularSpeed += angularAcce * dt;
     Euler angle{ 0, -mAngularSpeed.y * dt, mAngularSpeed.x * dt };

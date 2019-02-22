@@ -1037,6 +1037,7 @@ exit/B %errlev%</Command>
     <ClCompile Include="GameCommon.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Utils\Config.cpp" />
+    <ClCompile Include="Utils\FileCache.cpp" />
     <ClCompile Include="VoxelRenderer\VoxelRenderer.cpp" />
     <ClCompile Include="World\Block.cpp" />
     <ClCompile Include="World\BlockDef.cpp" />
@@ -1053,6 +1054,7 @@ exit/B %errlev%</Command>
     <ClInclude Include="EngineBuildPreferences.hpp" />
     <ClInclude Include="GameCommon.hpp" />
     <ClInclude Include="Utils\Config.hpp" />
+    <ClInclude Include="Utils\FileCache.hpp" />
     <ClInclude Include="VoxelRenderer\VoxelRenderer.hpp" />
     <ClInclude Include="World\Block.hpp" />
     <ClInclude Include="World\BlockDef.hpp" />

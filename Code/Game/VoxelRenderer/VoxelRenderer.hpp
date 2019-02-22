@@ -21,6 +21,7 @@ public:
   void onLoad(RHIContext& ctx) override;
 
   void onRenderFrame(RHIContext& ctx) override;
+  void onRenderGui(RHIContext& ctx) override;
 
   void issueChunk(const Chunk* chunk);
 

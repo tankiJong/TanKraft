@@ -19,7 +19,7 @@ RWTexture2D<float4> uTexAO: register(u0);
 static uint seed;
 
 static const float SSAO_DEPTH_RADIUS = 1.f;
-#define SSAO_SAMPLE_COUNT 16
+#define SSAO_SAMPLE_COUNT 32
 
 [RootSignature(SSAO_RootSig)]
 [numthreads(16, 16, 1)]

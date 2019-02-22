@@ -5,7 +5,9 @@
 #include "Engine/Math/Primitives/ivec3.hpp"
 #include "Engine/Math/Primitives/ivec2.hpp"
 #include "Engine/Graphics/Model/Mesher.hpp"
+#include "Engine/Math/Primitives/aabb3.hpp"
 
+class Chunk;
 class Mesh;
 class World;
 class ChunkCoords;
@@ -18,6 +20,7 @@ class BlockCoords: public ivec3 {
 public:
   using ivec3::ivec3;
 
+  BlockCoords() {}
   BlockCoords(const ivec3& copy): ivec3(copy) {}
   operator ivec3&() { return *this;}
   operator const ivec3&() const { return *this; }
@@ -25,8 +28,10 @@ public:
   vec3 centerPosition() const;
   BlockIndex toIndex() const;
 
-  static BlockCoords fromIndex(BlockIndex index);;
-  static BlockIndex  stepIndex(BlockIndex index, BlockCoords delta, ChunkCoords* outChunkShift);
+  static BlockCoords fromWorld(const Chunk* chunk, const vec3& world);
+  static BlockCoords fromIndex(BlockIndex index);
+  static aabb3 blockBounds(Chunk* chunk, BlockIndex index);
+  static aabb3 blockBounds(Chunk* chunk, const BlockCoords& coords);
 };
 
 class ChunkCoords: public ivec2 {
@@ -73,7 +78,8 @@ public:
   static constexpr BlockIndex kSizeMaskY = BlockIndex(((1u << (kSizeBitX+kSizeBitY)) - 1u) ^ kSizeMaskX);
   static constexpr BlockIndex kSizeMaskZ = BlockIndex((~0u) ^ (kSizeMaskX | kSizeMaskY));
 
-  Chunk(ChunkCoords coords): mCoords(std::move(coords)) {}
+  Chunk(ChunkCoords coords);
+
   ~Chunk();
   enum eNeighbor: uint8_t {
     NEIGHBOR_POS_X,
@@ -100,6 +106,7 @@ public:
 
     bool operator==(const Iterator& rhs) const { return self == rhs.self; }
     bool operator!=(const Iterator& rhs) const { return self != rhs.self; }
+
   protected:
     Iterator(Chunk* chunk): self(chunk) {}
     Chunk* self = nullptr;
@@ -110,20 +117,39 @@ public:
     friend class Chunk;
 
   public:
+    BlockIter(Chunk* c, BlockCoords crds);
+    BlockIter(Chunk* c, BlockIndex index);
     BlockIter next(const BlockCoords& deltaCoords) const;
+    BlockIter nextNegX() const;
+    BlockIter nextPosX() const;
+    BlockIter nextNegY() const;
+    BlockIter nextPosY() const;
+    BlockIter nextNegZ() const;
+    BlockIter nextPosZ() const;
+    void stepNegX();
+    void stepPosX();
+    void stepNegY();
+    void stepPosY();
+    void stepPosZ();
+    void stepNegZ();
     void step(const BlockCoords& deltaCoords);
     bool valid() const;
+
+    void reset(BlockDef& def);
+    aabb3 bounds() const {
+      return BlockCoords::blockBounds(chunk.self, blockIndex);
+    }
     BlockIter operator+(const BlockCoords& deltaCoords) const;
 
     Block& operator*() const;
     Block* operator->() const;
-
-  protected:
-    BlockIter(Chunk* c, BlockCoords crds);
-
+    Block* block() const;
+    bool operator==(const BlockIter& rhs) const { return chunk == rhs.chunk && blockIndex == rhs.blockIndex; };
+    bool operator!=(const BlockIter& rhs) const { return !(*this == rhs); };
     Iterator chunk;
-    BlockCoords blockCoords;
-    Block* block = nullptr;
+  protected:
+
+    BlockIndex blockIndex;
   };
 
   void onInit();
@@ -134,30 +160,61 @@ public:
   void onDestroy();
   ChunkCoords coords() const { return mCoords; };
 
-  aabb3 bounds();
+  aabb3 bounds() const { return mBounds; }
+  const Block& block(uint index) const { return mBlocks[index]; }
   Block& block(BlockIndex index) { return mBlocks[index]; }
 
   bool isDirty() const { return mIsDirty; }
+  void setDirty() { mIsDirty = true; };
 
   bool reconstructMesh();
 
   Iterator iterator();
   BlockIter blockIter(const BlockCoords& coords) { return { this, coords }; };
+  BlockIter blockIter(const vec3& world);
+
   Iterator neighbor(eNeighbor loc) const { return { mNeighbors[loc] }; }
 
   void setNeighbor(eNeighbor loc, Chunk* chunk) { mNeighbors[loc] = chunk; }
 
   void onRegisterToWorld(World* world);
   void onUnregisterFromWorld();
-protected:
 
+  size_t serialize(byte_t* data, size_t maxWrite) const;
+  void deserialize(byte_t* data, size_t maxRead);
+
+  void markSavePending() { mSavePending =true;}
+protected:
+  void addBlock(const BlockIter& block, const vec3& pivot);
   void generateBlocks();
   bool neighborsLoaded() const;
-  Block mBlocks[kTotalBlockCount]; // 0xffff
+  std::array<Block, kTotalBlockCount> mBlocks; // 0xffff
   ChunkCoords mCoords;
-  std::array<Chunk*, NUM_NEIGHBOR> mNeighbors;
+  std::array<Chunk*, NUM_NEIGHBOR> mNeighbors 
+    { nullptr, nullptr, nullptr, nullptr, };
   owner<Mesh*> mMesh = nullptr;
   Mesher mMesher;
   bool mIsDirty = true;
-  World* mOwner;
+  World* mOwner = nullptr;
+  aabb3 mBounds;
+  bool mSavePending = false;
 };
+
+inline BlockIndex BlockCoords::toIndex() const {
+  BlockIndex index = 0;
+  // EXPECTS(x >=0 && x < Chunk::kSizeX);
+  // EXPECTS(y >=0 && y < Chunk::kSizeY);
+  // EXPECTS(z >=0 && z < Chunk::kSizeZ);
+
+  index = (x & Chunk::kSizeMaskX)
+        | ((y << Chunk::kSizeBitX) & Chunk::kSizeMaskY)
+        | ((z << (Chunk::kSizeBitX + Chunk::kSizeBitY)) & Chunk::kSizeMaskZ);
+
+  return index;
+}
+
+inline BlockCoords BlockCoords::fromIndex(BlockIndex index) {
+  return { Chunk::kSizeMaskX & index, 
+          (Chunk::kSizeMaskY & index) >> Chunk::kSizeBitX,
+          (Chunk::kSizeMaskZ & index) >> (Chunk::kSizeBitX + Chunk::kSizeBitY) };
+}

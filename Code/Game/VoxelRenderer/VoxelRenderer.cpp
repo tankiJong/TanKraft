@@ -21,6 +21,8 @@
 #include "VoxelRenderer/SSAO_cs.h"
 #include "Engine/Renderer/RenderGraph/RenderPass/BlurPass.hpp"
 #include "Engine/Input/Input.hpp"
+#include "Engine/Core/Image.hpp"
+#include "Engine/File/FileSystem.hpp"
 
 // DFS TODO: add ConstBuffer class
 
@@ -123,6 +125,10 @@ void VoxelRenderer::onRenderFrame(RHIContext& ctx) {
   // ctx.transitionBarrier(mTFinal.get(), RHIResource::State::CopySource);
   // ctx.transitionBarrier(RHIDevice::get()->backBuffer().get(), RHIResource::State::CopyDest);
   // copyToBackBuffer(ctx);
+
+}
+
+void VoxelRenderer::onRenderGui(RHIContext&) {
 
 }
 
@@ -469,6 +475,7 @@ void VoxelRenderer::defineRenderPasses() {
 
     return [&](RHIContext& ctx) {
       ctx.draw(0, 3);
+      ctx.copyResource(*mGDepth, *RHIDevice::get()->depthBuffer());
     };
   });
 
@@ -533,6 +540,8 @@ DEF_RESOURCE(Program, "Game/Shader/Voxel/GenGBuffer") {
 
   return prog;
 }
+
+
 
 DEF_RESOURCE(Program, "Game/Shader/Voxel/DeferredShading") {
   Program::sptr_t prog = Program::sptr_t(new Program());

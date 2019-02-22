@@ -5,7 +5,8 @@ Block Block::invalid;
 
 void Block::reset(const BlockDef& def) {
   mType = def.id();
-  mState = 0u;
+  mBitFlags = 0;
+  mBitFlags |= def.opaque() ? kOpaqueFlag : 0x0;
 }
 
 const BlockDef& Block::type() const {
