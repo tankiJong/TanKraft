@@ -23,8 +23,10 @@
 #include "Engine/Input/Input.hpp"
 #include "Engine/Core/Image.hpp"
 #include "Engine/File/FileSystem.hpp"
+#include "Game/World/World.hpp"
+#include "Game/Utils/Config.hpp"
 
-// DFS TODO: add ConstBuffer class
+// DFS TODO: add ConstBuffer class66
 
 void VoxelRenderer::onLoad(RHIContext&) {
   auto size = Window::Get()->bounds().size();
@@ -82,11 +84,10 @@ void VoxelRenderer::onLoad(RHIContext&) {
   // constructFrameMesh();
   defineRenderPasses();
 
+  mFrameData.gPlanetRadius = 1000;
 }
 
 void VoxelRenderer::onRenderFrame(RHIContext& ctx) {
-  
-  // constructTestSphere();
   
   updateFrameConstant(ctx);
   updateViewConstant(ctx);
@@ -372,6 +373,27 @@ void VoxelRenderer::constructTestSphere() {
 void VoxelRenderer::updateFrameConstant(RHIContext&) {
   mFrameData.gFrameCount++;
   mFrameData.gTime = (float)GetMainClock().total.second;
+
+  static float time = 0;
+  static vec3  gRayleigh{5.5f, 13.0f, 22.4f};
+  static vec3 gMie{21, 21, 21};
+  static float  scaleRayleigh = 0.0001225, scaleMie = 0.0000012;
+
+  time += GetMainClock().frame.second;
+
+  {
+    ImGui::Begin("Constants");
+      ImGui::SliderFloat("Planet Radius", &mFrameData.gPlanetRadius, Config::kMaxActivateDistance, 10000);
+      ImGui::SliderFloat("Time", &time, 0, 1);
+      ImGui::SliderFloat("Sun Power", &mFrameData.gSunPower, 1, 100, "%.1f");
+      ImGui::DragFloat("Rayleigh scale", &scaleRayleigh, 0.0000001, 0.0000001, 1, "%.10f");
+      ImGui::DragFloat("Mie scale", &scaleMie, 0.0000001, 0.0000001, 1, "%.10f");
+      ImGui::DragFloat2("Scatter Thickness: Raylegigh/Mie", (float*)&mFrameData.gScatterThickness, 1, 10, 10000);
+    ImGui::End();
+  }
+  mFrameData.gRayleigh = gRayleigh * scaleRayleigh;
+  mFrameData.gMie = gMie * scaleMie;
+  mFrameData.gSunDir = vec3(0, sinf(time * .1f), cosf(time * .1f));
   mCFrameData->updateData(mFrameData);
 
   // mGDepth = RHIDevice::get()->depthBuffer();
@@ -396,7 +418,7 @@ void VoxelRenderer::defineRenderPasses() {
 
     auto albedo = Resource<Texture2>::get("/Data/Images/Terrain_32x32.png");
 
-    builder.readSrv("albedo-tex", albedo, 0);
+    builder.readSrv("albedo-tex", *albedo->srv(0, 6), 0);
 
     builder.writeRtv("g-albedo", mGAlbedo, 0);
     builder.writeRtv("g-normal", mGNormal, 1);
@@ -464,14 +486,17 @@ void VoxelRenderer::defineRenderPasses() {
     builder.readCbv("model-mat", mCModel, 2);
     builder.writeRtv("final-image", mTFinal, 0);
 
+    auto skybox = Resource<TextureCube>::get("/Data/Images/skybox_texture.cube.jpg");
+
     builder.readSrv("g-albedo", mGAlbedo, 0);
     builder.readSrv("g-normal", mGNormal, 1);
     builder.readSrv("g-tangent", mGTangent, 2);
     builder.readSrv("g-bitangent", mGBiTangent, 3);
     builder.readSrv("g-position", mGPosition, 4);
     builder.readSrv("g-texAO", mTexAO, 5);
-    builder.readSrv("g-lights", mTLights, 6);
-
+    builder.readSrv("g-depth", mGDepth, 6);
+    builder.readSrv("g-lights", mTLights, 7);
+    builder.readSrv("tex-sky", skybox, 8);
 
     return [&](RHIContext& ctx) {
       ctx.draw(0, 3);
@@ -479,11 +504,39 @@ void VoxelRenderer::defineRenderPasses() {
     };
   });
 
+  auto& debugLightPass = mGraph.defineNode("Debug:Light", [&](RenderNodeContext& builder) {
+    auto prog = Resource<Program>::get("internal/Shader/debug/always");
+    builder.reset(prog);
+
+    RHIBuffer::sptr_t tintBuffer = RHIBuffer::create(sizeof(vec4), RHIResource::BindingFlag::ConstantBuffer, RHIBuffer::CPUAccess::Write, &vec4::one);
+
+    builder.readCbv("camera-mat", mCCamera, 1);
+    builder.readCbv("tint-buffer", tintBuffer, 6);
+
+    builder.writeRtv("final-image", mTFinal, 0);
+
+    return [&](RHIContext& ctx) {
+      Mesh* mesh = mWorld->aquireDebugLightDirtyMesh();
+      if(!mesh) return;
+      mesh->bindForContext(ctx);
+      for(const draw_instr_t& instr: mesh->instructions()) {
+        ctx.setPrimitiveTopology(instr.prim);
+        if(instr.useIndices) {
+          ctx.drawIndexed(0, instr.startIndex, instr.elementCount);
+        } else {
+          ctx.draw(instr.startIndex, instr.elementCount);
+        }
+      }
+
+      SAFE_DELETE(mesh);
+    };
+  });
   // this is not optional, consider case like: a->pass1->a, a->pass2->a, a->pass2->a, you cannot figure out the sequence.
   // mGraph.depend(genBufferPass, ssaoPass);
   // mGraph.depend(genBufferPass, deferredShadingPass);
   mGraph.depend(ssaoBlurPassV, ssaoBlurPassH);
   mGraph.depend(ssaoBlurPassH, deferredShadingPass);
+  mGraph.depend(deferredShadingPass, debugLightPass);
   
   // another way to go with is specify dependencies among resources, which gives the freedom to name res differently among nodes.
   mGraph.connect(genBufferPass, "g-albedo", deferredShadingPass, "g-albedo");
@@ -491,6 +544,7 @@ void VoxelRenderer::defineRenderPasses() {
   mGraph.connect(genBufferPass, "g-tangent", deferredShadingPass, "g-tangent");
   mGraph.connect(genBufferPass, "g-bitangent", deferredShadingPass, "g-bitangent");
   mGraph.connect(genBufferPass, "g-position", deferredShadingPass, "g-position");
+  mGraph.connect(genBufferPass, "g-depth", deferredShadingPass, "g-depth");
 
   mGraph.connect(genBufferPass, "g-normal", ssaoPass, "g-normal");
   mGraph.connect(genBufferPass, "g-tangent", ssaoPass, "g-tangent");
@@ -507,7 +561,8 @@ void VoxelRenderer::defineRenderPasses() {
 
   // mGraph.setOutput(ssaoPass, "g-texAO");
   // mGraph.setOutput(ssaoBlurPassH, "blur-output");
-  mGraph.setOutput(deferredShadingPass, "final-image");
+  // mGraph.setOutput(deferredShadingPass, "final-image");
+  mGraph.setOutput(debugLightPass, "final-image");
 
   mGraph.compile();
 
@@ -540,6 +595,7 @@ DEF_RESOURCE(Program, "Game/Shader/Voxel/GenGBuffer") {
 
   return prog;
 }
+
 
 
 

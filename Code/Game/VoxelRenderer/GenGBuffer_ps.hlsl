@@ -5,7 +5,7 @@ PSOutput main(PSInput input)
 {
 	PSOutput output;
 
-	float4 texColor = input.color * gTexAlbedo.Sample(gSampler, input.uv);
+	float4 texColor = gTexAlbedo.Sample(gSampler, input.uv);
 	// float4 texColor = input.color;
   // output.color = float4(
 	// 	PhongLighting(input.worldPosition, input.normal, texColor.xyz, input.eyePosition), 1.f);

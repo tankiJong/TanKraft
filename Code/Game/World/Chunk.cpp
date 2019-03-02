@@ -10,35 +10,38 @@
 static constexpr int kDivNumMax = 32;
 static constexpr int kDivDividerMax = 32;
 
+Chunk Chunk::sInvalidChunk = {};
+
+
 struct div_tt {
   constexpr div_tt(int rem, int quot): rem(rem), quot(quot) {}
   constexpr div_tt(): rem(0), quot(0) {}
   int rem;
   int quot;
 };
-constexpr auto genDivTable() {
-}
-
-// [num][divider]
-static constexpr auto gPositiveDivLookUp = []() constexpr {
-  std::array<std::array<div_tt, kDivNumMax>, kDivDividerMax> arr;
-  for(int i = 0; i < kDivNumMax; i++) {
-    for(int j = 1; j < kDivDividerMax; j++) {
-      arr[j][i] = div_tt(i % j, i / j);
-    }
-  }
-  return arr;
-}();
-
-static constexpr auto gNegativeDivLookUp = []() constexpr {
-  std::array<std::array<div_tt, kDivNumMax>, kDivDividerMax> arr;
-  for(int i = 0; i < kDivNumMax; i++) {
-    for(int j = 1; j < kDivDividerMax; j++) {
-      arr[j][i] = div_tt((-i % j) + j, i / j - 1);
-    }
-  }
-  return arr;
-}();
+// constexpr auto genDivTable() {
+// }
+//
+// // [num][divider]
+// static constexpr auto gPositiveDivLookUp = []() constexpr {
+//   std::array<std::array<div_tt, kDivNumMax>, kDivDividerMax> arr;
+//   for(int i = 0; i < kDivNumMax; i++) {
+//     for(int j = 1; j < kDivDividerMax; j++) {
+//       arr[j][i] = div_tt(i % j, i / j);
+//     }
+//   }
+//   return arr;
+// }();
+//
+// static constexpr auto gNegativeDivLookUp = []() constexpr {
+//   std::array<std::array<div_tt, kDivNumMax>, kDivDividerMax> arr;
+//   for(int i = 0; i < kDivNumMax; i++) {
+//     for(int j = 1; j < kDivDividerMax; j++) {
+//       arr[j][i] = div_tt((-i % j) + j, i / j - 1);
+//     }
+//   }
+//   return arr;
+// }();
 
 inline div_tt quick_div(int num, uint pow2) {
   div_tt result;
@@ -57,9 +60,9 @@ inline div_tt quick_div(int num, uint pow2) {
 
 BlockCoords BlockCoords::fromWorld(const Chunk* chunk, const vec3& world) {
   vec3 local = world - chunk->bounds().mins;
-  GUARANTEE_RECOVERABLE(local.x >= 0, "");
-  GUARANTEE_RECOVERABLE(local.y >= 0, "");
-  GUARANTEE_RECOVERABLE(local.z >= 0, "");
+  // GUARANTEE_RECOVERABLE(local.x >= 0, "");
+  // GUARANTEE_RECOVERABLE(local.y >= 0, "");
+  // GUARANTEE_RECOVERABLE(local.z >= 0, "");
   return { (int)floor(local.x), (int)floor(local.y), (int)floor(local.z) };
 }
 
@@ -91,14 +94,12 @@ Chunk::~Chunk() {
 }
 
 void Chunk::Iterator::step(eNeighbor dir) {
-  if(self != nullptr) {
-    *this = self->neighbor(dir);
-  }
+  *this = self->neighbor(dir);
 }
 
 void Chunk::Iterator::step(const ChunkCoords& deltaCoords) {
 
-  if(self == nullptr) return;
+  if(!valid()) return;
   
   eNeighbor dirX = deltaCoords.x > 0 ? NEIGHBOR_POS_X : NEIGHBOR_NEG_X;
   eNeighbor dirY = deltaCoords.y > 0 ? NEIGHBOR_POS_Y : NEIGHBOR_NEG_Y;
@@ -171,7 +172,7 @@ void Chunk::BlockIter::step(const BlockCoords& deltaCoords) {
   // deltaCoords.z = 0;
 
   if(current.z >= kSizeZ || current.z < 0) {
-    chunk = { nullptr };
+    chunk = { sInvalidChunk };
     return;
   }
 
@@ -244,7 +245,7 @@ void Chunk::BlockIter::stepPosY() {
 void Chunk::BlockIter::stepPosZ() {
   if((blockIndex & kSizeMaskZ) == kSizeMaskZ) {
     blockIndex &= ~kSizeMaskZ;
-    chunk = nullptr;
+    chunk = invalidIter();
   } else {
     blockIndex += kSizeX * kSizeY;
   }
@@ -253,7 +254,7 @@ void Chunk::BlockIter::stepPosZ() {
 void Chunk::BlockIter::stepNegZ() {
   if((blockIndex & kSizeMaskZ) == 0) {
     blockIndex |= kSizeMaskZ;
-    chunk = nullptr;
+    chunk = invalidIter();
   } else {
     blockIndex -= kSizeX * kSizeY;
   }
@@ -268,34 +269,30 @@ void Chunk::BlockIter::reset(BlockDef& def) {
   Block* b = block();
   if(b == nullptr) return;
 
-  b->reset(def);
+  b->resetFromDef(def);
+
   chunk->setDirty();
-  chunk->markSavePending();
   if((blockIndex & kSizeMaskX) == 0) {
     auto iter = chunk->neighbor(NEIGHBOR_NEG_X);
-    if(iter.valid()) {
-      iter->setDirty();
-    }
+    iter->setDirty();
   }
   if((blockIndex & kSizeMaskX) == kSizeMaskX) {
     auto iter = chunk->neighbor(NEIGHBOR_POS_X);
-    if(iter.valid()) {
-      iter->setDirty();
-    }
+    iter->setDirty();
   }
 
   if((blockIndex & kSizeMaskY) == 0) {
     auto iter = chunk->neighbor(NEIGHBOR_NEG_Y);
-    if(iter.valid()) {
-      iter->setDirty();
-    }
+    iter->setDirty();
   }
   if((blockIndex & kSizeMaskY) == kSizeMaskY) {
     auto iter = chunk->neighbor(NEIGHBOR_POS_Y);
-    if(iter.valid()) {
-      iter->setDirty();
-    }
+    iter->setDirty();
   }
+}
+
+void Chunk::BlockIter::dirtyLight() {
+  chunk->markBlockLightDirty(*this);
 }
 
 Chunk::BlockIter Chunk::BlockIter::operator+(const BlockCoords& deltaCoords) const {
@@ -308,7 +305,7 @@ Block& Chunk::BlockIter::operator*() const {
   if(chunk.valid()) {
     return chunk->block(blockIndex);
   } else {
-    return Block::invalid;
+    return Block::kInvalid;
   }
 }
 
@@ -320,15 +317,15 @@ Block* Chunk::BlockIter::block() const {
   if(chunk.valid()) {
     return &chunk->block(blockIndex);
   } else {
-    return &Block::invalid;
+    return &Block::kInvalid;
   } 
 }
 
-Chunk::BlockIter::BlockIter(Chunk* c, BlockCoords crds)
+Chunk::BlockIter::BlockIter(Chunk& c, BlockCoords crds)
 : chunk(c), blockIndex(crds.toIndex()) {
 }
 
-Chunk::BlockIter::BlockIter(Chunk* c, BlockIndex index)
+Chunk::BlockIter::BlockIter(Chunk& c, BlockIndex index)
 : chunk(c), blockIndex(index) {
 }
 
@@ -354,8 +351,11 @@ void Chunk::onInit() {
 
 }
 
-void Chunk::onUpdate() {
+void Chunk::afterRegisterToWorld() {
+  initLights();
+}
 
+void Chunk::onUpdate() {
 }
 
 void Chunk::onDestroy() {
@@ -373,44 +373,44 @@ void Chunk::onRegisterToWorld(World* world) {
   // +x
   {
     Chunk* c = mOwner->findChunk(mCoords + ChunkCoords{1, 0});
-    setNeighbor(NEIGHBOR_POS_X, c);
-    if(c != nullptr) c->setNeighbor(NEIGHBOR_NEG_X, this);
+    setNeighbor(NEIGHBOR_POS_X, *c);
+    if(c->valid()) c->setNeighbor(NEIGHBOR_NEG_X, *this);
   }
 
   // -x
   {
     Chunk* c = mOwner->findChunk(mCoords + ChunkCoords{-1, 0});
-    setNeighbor(NEIGHBOR_NEG_X, c);
-    if(c != nullptr) c->setNeighbor(NEIGHBOR_POS_X, this);
+    setNeighbor(NEIGHBOR_NEG_X, *c);
+    if(c->valid()) c->setNeighbor(NEIGHBOR_POS_X, *this);
   }
 
   // +y
   {
     Chunk* c = mOwner->findChunk(mCoords + ChunkCoords{0, 1});
-    setNeighbor(NEIGHBOR_POS_Y, c);
-    if(c != nullptr) c->setNeighbor(NEIGHBOR_NEG_Y, this);
+    setNeighbor(NEIGHBOR_POS_Y, *c);
+    if(c->valid()) c->setNeighbor(NEIGHBOR_NEG_Y, *this);
   }
 
   // -y
   {
     Chunk* c = mOwner->findChunk(mCoords + ChunkCoords{0, -1});
-    setNeighbor(NEIGHBOR_NEG_Y, c);
-    if(c != nullptr) c->setNeighbor(NEIGHBOR_POS_Y, this);
+    setNeighbor(NEIGHBOR_NEG_Y, *c);
+    if(c->valid()) c->setNeighbor(NEIGHBOR_POS_Y, *this);
   }
 }
 
 void Chunk::onUnregisterFromWorld() {
-  if(mNeighbors[NEIGHBOR_POS_X] != nullptr) {
-    mNeighbors[NEIGHBOR_POS_X]->setNeighbor(NEIGHBOR_NEG_X, nullptr);
+  if(mNeighbors[NEIGHBOR_POS_X]->valid()) {
+    mNeighbors[NEIGHBOR_POS_X]->setNeighbor(NEIGHBOR_NEG_X, sInvalidChunk);
   }
-  if(mNeighbors[NEIGHBOR_NEG_X] != nullptr) {
-    mNeighbors[NEIGHBOR_NEG_X]->setNeighbor(NEIGHBOR_POS_X, nullptr);
+  if(mNeighbors[NEIGHBOR_NEG_X]->valid()) {
+    mNeighbors[NEIGHBOR_NEG_X]->setNeighbor(NEIGHBOR_POS_X, sInvalidChunk);
   }
-  if(mNeighbors[NEIGHBOR_POS_Y] != nullptr) {
-    mNeighbors[NEIGHBOR_POS_Y]->setNeighbor(NEIGHBOR_NEG_Y, nullptr);
+  if(mNeighbors[NEIGHBOR_POS_Y]->valid()) {
+    mNeighbors[NEIGHBOR_POS_Y]->setNeighbor(NEIGHBOR_NEG_Y, sInvalidChunk);
   }
-  if(mNeighbors[NEIGHBOR_NEG_Y] != nullptr) {
-    mNeighbors[NEIGHBOR_NEG_Y]->setNeighbor(NEIGHBOR_POS_Y, nullptr);
+  if(mNeighbors[NEIGHBOR_NEG_Y]->valid()) {
+    mNeighbors[NEIGHBOR_NEG_Y]->setNeighbor(NEIGHBOR_POS_Y, sInvalidChunk);
   }
 
   mOwner = nullptr;
@@ -458,7 +458,7 @@ size_t Chunk::serialize(byte_t* data, size_t maxWrite) const {
       totalWrite += sizeof(entry_t); 
       
       e->type = b.id();
-      ENSURES(e->type <= 3);
+      ENSURES(e->type <= 4);
       e->count = 1;
       ENSURES(totalWrite <= maxWrite);
     } else {
@@ -490,7 +490,8 @@ void Chunk::deserialize(byte_t* data, size_t maxRead) {
     BlockDef* def = BlockDef::get(entry->type);
 
     for(BlockIndex i = 0; i < entry->count; i++) {
-      block(i + index).reset(*def);
+      BlockIndex bi = i + index;
+      resetBlock(bi, *def);
     }
 
     index += entry->count;
@@ -500,6 +501,11 @@ void Chunk::deserialize(byte_t* data, size_t maxRead) {
 
   // should be wrap around;
   ENSURES(index == 0);
+}
+
+void Chunk::resetBlock(BlockIndex index, BlockDef& def) {
+  BlockIter iter(*this, index);
+  iter.reset(def);
 }
 
 void Chunk::addBlock(const BlockIter& block, const vec3& pivot) {
@@ -524,140 +530,99 @@ void Chunk::addBlock(const BlockIter& block, const vec3& pivot) {
       vec3{ 0 + pivot.x, 1 + pivot.y, 0 + pivot.z },
     };
 
-
-    const BlockDef& def = block->type();
-    
-    if(block->id() != 0) {
-      // sides
-      if(!block.nextPosX()->opaque()) {
-        mMesher.normal({1, 0, 0});
-        mMesher.tangent({0, 1, 0});
-        aabb2 uvs = def.uvs(BlockDef::FACE_SIDE);
-
-        mMesher.uv(uvs.mins)
-               .vertex3f(vertices[5]);
-
-        mMesher.uv({uvs.maxs.x, uvs.mins.y})
-               .vertex3f(vertices[6]);
-
-        mMesher.uv(uvs.maxs)
-               .vertex3f(vertices[2]);
-
-        mMesher.uv({uvs.mins.x, uvs.maxs.y})
-               .vertex3f(vertices[1]);
-
-        mMesher.quad();
-      }
-      
-      if(!block.nextNegX()->opaque()) {
-        mMesher.normal({-1, 0, 0});
-        mMesher.tangent({0, 1, 0});
-        aabb2 uvs = def.uvs(BlockDef::FACE_SIDE);
-
-        mMesher.uv(uvs.mins)
-               .vertex3f(vertices[7]);
-
-        mMesher.uv({uvs.maxs.x, uvs.mins.y})
-               .vertex3f(vertices[4]);
-
-        mMesher.uv(uvs.maxs)
-               .vertex3f(vertices[0]);
-
-        mMesher.uv({uvs.mins.x, uvs.maxs.y})
-               .vertex3f(vertices[3]);
-
-        mMesher.quad();
-      }
-      
-      if(!block.nextNegY()->opaque()) {
-        mMesher.normal({0, -1, 0});
-        mMesher.tangent({1, 0, 0});
-        aabb2 uvs = def.uvs(BlockDef::FACE_SIDE);
-
-        mMesher.uv(uvs.mins)
-               .vertex3f(vertices[4]);
-
-        mMesher.uv({uvs.maxs.x, uvs.mins.y})
-               .vertex3f(vertices[5]);
-
-        mMesher.uv(uvs.maxs)
-               .vertex3f(vertices[1]);
-
-        mMesher.uv({uvs.mins.x, uvs.maxs.y})
-               .vertex3f(vertices[0]);
-
-        mMesher.quad();
-      }
-
-      if(!block.nextPosY()->opaque()) {
-        mMesher.normal({0, 1, 0});
-        mMesher.tangent({1, 0, 0});
-        aabb2 uvs = def.uvs(BlockDef::FACE_SIDE);
-
-        mMesher.uv(uvs.mins)
-               .vertex3f(vertices[6]);
-
-        mMesher.uv({uvs.maxs.x, uvs.mins.y})
-               .vertex3f(vertices[7]);
-
-        mMesher.uv(uvs.maxs)
-               .vertex3f(vertices[3]);
-
-        mMesher.uv({uvs.mins.x, uvs.maxs.y})
-               .vertex3f(vertices[2]);
-
-        mMesher.quad();
-      }
-
-      // bottom
-      if(!block.nextNegZ()->opaque()) {
-        mMesher.normal({0, 0, -1});
-        mMesher.tangent({1, 0, 0});
-        aabb2 uvs = def.uvs(BlockDef::FACE_BTM);
-
-        mMesher.uv(uvs.mins)
-               .vertex3f(vertices[4]);
-
-        mMesher.uv({uvs.maxs.x, uvs.mins.y})
-               .vertex3f(vertices[7]);
-
-        mMesher.uv(uvs.maxs)
-               .vertex3f(vertices[6]);
-
-        mMesher.uv({uvs.mins.x, uvs.maxs.y})
-               .vertex3f(vertices[5]);
-
-        mMesher.quad();
-      }
-      
-      // top
-      if(!block.nextPosZ()->opaque()) {
-        mMesher.normal({0, 0, 1});
-        mMesher.tangent({1, 0, 0});
-        aabb2 uvs = def.uvs(BlockDef::FACE_TOP);
-
-        mMesher.uv(uvs.mins)
-               .vertex3f(vertices[0]);
-
-        mMesher.uv({uvs.maxs.x, uvs.mins.y})
-               .vertex3f(vertices[1]);
-
-        mMesher.uv(uvs.maxs)
-               .vertex3f(vertices[2]);
-
-        mMesher.uv({uvs.mins.x, uvs.maxs.y})
-               .vertex3f(vertices[3]);
-
-        mMesher.quad();
-      }
+    struct Face {
+      uint v[4];
     };
 
-  };
+    static constexpr Face faces[6] = {
+      {5, 6, 2, 1},
+      {7, 4, 0, 3},
+      {4, 5, 1, 0},
+      {6, 7, 3, 2},
+      {4, 7, 6, 5},
+      {0, 1, 2, 3}
+    };
+
+    static const vec3 normals[6] = {
+      {1, 0, 0},
+      {-1, 0, 0},
+      {0, -1, 0},
+      {0, 1, 0},
+      {0, 0, -1},
+      {0, 0, 1}
+    };
+
+    static const vec3 tangents[6] = {
+      {0, 1, 0},
+      {0, 1, 0},
+      {1, 0, 0},
+      {1, 0, 0},
+      {1, 0, 0},
+      {1, 0, 0}
+    };
+
+    static constexpr BlockDef::eFace uvs[6] = {
+      BlockDef::FACE_SIDE,
+      BlockDef::FACE_SIDE,
+      BlockDef::FACE_SIDE,
+      BlockDef::FACE_SIDE,
+      BlockDef::FACE_BTM,
+      BlockDef::FACE_TOP
+    };
+
+    BlockIter neighbors[6] = {
+      block.nextPosX(),
+      block.nextNegX(),
+      block.nextNegY(),
+      block.nextPosY(),
+      block.nextNegZ(),
+      block.nextPosZ()
+    };
+
+
+    const BlockDef& def = block->type();
+    if(block->id() != 0) {
+      for(uint i = 0; i < 6; i++) {
+        BlockIter neighbor = neighbors[i];
+        if(!neighbor->opaque()) {
+          mMesher.normal(normals[i]);
+          mMesher.tangent(tangents[i]);
+          aabb2 uv = def.uvs(uvs[i]);
+
+          Face face = faces[i];
+
+          Rgba color(neighbor->indoorLight() * 16, neighbor->outdoorLight() * 16, 0);
+          // if(neighbor->indoorLight()) {
+          //   DEBUGBREAK;
+          // }
+          mMesher.color(color);
+
+          mMesher.uv(uv.mins)
+                 .vertex3f(vertices[face.v[0]]);
+          mMesher.uv({uv.maxs.x, uv.mins.y})
+                 .vertex3f(vertices[face.v[1]]);
+          mMesher.uv(uv.maxs)
+                 .vertex3f(vertices[face.v[2]]);
+          mMesher.uv({uv.mins.x, uv.maxs.y})
+                 .vertex3f(vertices[face.v[3]]);
+          mMesher.quad();
+        }
+      }
+    }
+    
+  }
+
+void Chunk::markBlockLightDirty(const BlockIter& block) {
+  if(block->dirty()) return;
+  mOwner->submitDirtyBlock(block);
+  block->setDirty();
+};
+
 void Chunk::generateBlocks() {
   float noises[kSizeX][kSizeY];
 
   constexpr BlockIndex kWorldSeaLevel = 100;
-  constexpr int kChangeRange = (int(kSizeZ) - int(kWorldSeaLevel)) / 2;
+  constexpr int kChangeRange = (int(kSizeZ) - int(kWorldSeaLevel)) / 15;
 
   vec2 base = mCoords.pivotPosition().xy();
   for(uint i = 0; i < kSizeX; i++) {
@@ -683,13 +648,13 @@ void Chunk::generateBlocks() {
         float currentZMax = noises[coords.x][coords.y];
 
         if(coords.z > currentZMax) {
-          mBlocks[m].reset(*air);
+          resetBlock(m, *air);
         } else if(coords.z >= currentZMax - 1) {
-          mBlocks[m].reset(*grass);
+          resetBlock(m, *grass);
         } else if(coords.z >= currentZMax - 3) {
-          mBlocks[m].reset(*dust);
+         resetBlock(m, *dust);
         } else {
-          mBlocks[m].reset(*stone);
+         resetBlock(m, *stone);
         }
 
         m++;
@@ -699,9 +664,128 @@ void Chunk::generateBlocks() {
   }
 }
 
+void Chunk::initLights() {
+  
+  // populate outdoor lighting
+  for(uint y = 0; y < kSizeY; y++) {
+    for(uint x = 0; x < kSizeX; x++) {
+      BlockIndex index = BlockCoords::toIndex(x, y, kSizeZ - 1);
+      BlockIter iter = blockIter(index);
+      while(!iter->opaque() && iter.valid()) {
+        iter->setSky();
+        iter.stepNegZ();
+      }
+    }
+  }
+
+  for(uint y = 0; y < kSizeY; y++) {
+    for(uint x = 0; x < kSizeX; x++) {
+      BlockIndex index = BlockCoords::toIndex(x, y, kSizeZ - 1);
+      BlockIter iter = blockIter(index);
+      while(!iter->opaque() && iter.valid()) {
+        Block& b = *iter;
+
+        EXPECTS(iter->exposedToSky());
+
+        BlockIter neighbors[4] = {
+          iter.nextNegX(),
+          iter.nextPosX(),
+          iter.nextNegY(),
+          iter.nextPosY(),
+        };
+
+        for(BlockIter& neighbor: neighbors) {
+          if(neighbor->exposedToSky()) continue;
+          if(!neighbor.valid()) continue;
+          if(neighbor->opaque()) continue;
+          markBlockLightDirty(neighbor);
+        }
+
+        iter.stepNegZ();
+      }
+    }
+  }
+
+  // return;
+
+
+  /*
+   *         +x
+   *        ┌──┐       x
+   *      +y│  │-y   y─┘
+   *        └──┘
+   *         -x
+   */
+
+  // +x
+  if(neighbor(NEIGHBOR_POS_X).valid()) {
+    uint16_t x = kSizeMaskX;
+    for(uint16_t z = 0; z < kSizeZ; z++) {
+      for(uint16_t y = 0; y < kSizeY; y++) {
+        BlockIndex index = BlockCoords::toIndex(x, y, z);
+        BlockIter iter = blockIter(index);
+        if(!iter->opaque()) {
+          markBlockLightDirty(iter);
+        }
+      }
+    }
+  }
+  
+  // -x
+  if(neighbor(NEIGHBOR_NEG_X).valid()) {
+    uint16_t x = 0;
+    for(uint16_t z = 0; z < kSizeZ; z++) {
+      for(uint16_t y = 0; y < kSizeY; y++) {
+        BlockIndex index = BlockCoords::toIndex(x, y, z);
+        BlockIter iter = blockIter(index);
+        if(!iter->opaque()) {
+          markBlockLightDirty(iter);
+        }
+      }
+    }
+  }
+  
+  // +y
+  if(neighbor(NEIGHBOR_POS_Y).valid()) {
+    uint16_t y = kSizeMaskY;
+    for(uint16_t z = 0; z < kSizeZ; z++) {
+      for(uint16_t x = 0; x < kSizeX; x++) {
+        BlockIndex index = BlockCoords::toIndex(x, y, z);
+        BlockIter iter = blockIter(index);
+        if(!iter->opaque()) {
+          markBlockLightDirty(iter);
+        }
+      }
+    }
+  }
+  
+  // -y
+  if(neighbor(NEIGHBOR_NEG_Y).valid()) {
+    uint16_t y = 0;
+    for(uint16_t z = 0; z < kSizeZ; z++) {
+      for(uint16_t x = 0; x < kSizeX; x++) {
+        BlockIndex index = BlockCoords::toIndex(x, y, z);
+        BlockIter iter = blockIter(index);
+        if(!iter->opaque()) {
+          markBlockLightDirty(iter);
+        }
+      }
+    }
+  }
+
+  for(uint i = 0; i < kTotalBlockCount; i++) {
+    Block& b = mBlocks[i];
+    // light source
+    if(b.type().emissive() > 0) {
+      markBlockLightDirty({ *this, (BlockIndex)i});
+    } 
+  }
+
+}
+
 bool Chunk::neighborsLoaded() const {
   return std::reduce(mNeighbors.begin(), mNeighbors.end(), true, [](bool before, Chunk* b) {
-    return before && b != nullptr;
+    return before && b->valid();
   });
 }
 
@@ -753,7 +837,7 @@ bool Chunk::reconstructMesh() {
 }
 
 Chunk::Iterator Chunk::iterator() {
-  return { this };
+  return { *this };
 }
 
 Chunk::BlockIter Chunk::blockIter(const vec3& world) {

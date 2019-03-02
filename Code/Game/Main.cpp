@@ -101,7 +101,7 @@ void GameApplication::onInit() {
 
   mWorld = new World();
   mWorld->onInit();
-
+  sceneRenderer->setWorld(mWorld);
   Input::Get().mouseLockCursor(true);
   // Input::Get().mouseHideCursor(false);
 }
@@ -118,8 +118,18 @@ void GameApplication::onInput() {
 
   static float frameAvgSec = 0.f;
   frameAvgSec = frameAvgSec * .95f + dt * .05f;
-  Window::Get()->setTitle(Stringf("Tanki - Tankraft. Frame time: %.0f ms",
-                                  float(frameAvgSec * 1000.0)).c_str());
+
+  std::string seletedBlockInfo = "";
+
+  auto rc = mWorld->playerRaycastResult();
+  if(rc.impacted()) {
+    ivec3 coord = rc.contact.block.coords();
+    BlockIndex index = rc.contact.block.index();
+    ivec2 chunkCoords = rc.contact.block.chunk->coords();
+    seletedBlockInfo = Stringf("Chunk(%s), Index: %x, Coords: %i, %i, %i", chunkCoords.toString().c_str(), index, coord.x, coord.y, coord.z);
+  }
+  Window::Get()->setTitle(Stringf("Tanki - Tankraft. Frame time: %.0f ms, %s",
+                                  float(frameAvgSec * 1000.0), seletedBlockInfo.c_str()).c_str());
   // cameraController->onInput();
   // cameraController->onUpdate(dt);
   mWorld->onUpdate();

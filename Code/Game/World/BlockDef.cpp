@@ -7,11 +7,11 @@
 #define CI(x,y) spriteCoordsToIndex(x,y)
 
 std::array<BlockDef, BlockDef::kTotalBlockDef> BlockDef::sBlockDefs = {
-  BlockDef{0, false, "air", {CI(0,0), CI(0,0), CI(0,0)}},
-  BlockDef{1, true, "grass", {CI(21,0), CI(3,3), CI(4, 3)}},
-  BlockDef{2, true, "dust", {CI(4, 3), CI(4, 3), CI(4, 3)}},
-  BlockDef{3, true, "stone", {CI(1, 4), CI(1, 4), CI(1, 4)}},
-  BlockDef{4, true, "light", {CI(3, 13), CI(3, 13), CI(3, 13)}}
+  BlockDef{0, false, 0, "air", {CI(0,0), CI(0,0), CI(0,0)}},
+  BlockDef{1, true, 0, "grass", {CI(21,0), CI(3,3), CI(4, 3)}},
+  BlockDef{2, true, 0,"dust", {CI(4, 3), CI(4, 3), CI(4, 3)}},
+  BlockDef{3, true, 0, "stone", {CI(1, 4), CI(1, 4), CI(1, 4)}},
+  BlockDef{4, true, 0xf, "light", {CI(3, 13), CI(3, 13), CI(3, 13)}}
 };
 
 #undef CI
@@ -27,8 +27,8 @@ BlockDef::BlockDef() {
   }
 }
 
-BlockDef::BlockDef(block_id_t id, bool opaque, std::string_view name, const std::array<uint, NUM_FACE>& spriteIndexs)
-: mTypeId(id), mOpaque(opaque), mName(name), mSpriteIndex{spriteIndexs} {
+BlockDef::BlockDef(block_id_t id, bool opaque, uint8_t emissiveAmount, std::string_view name, const std::array<uint, NUM_FACE>& spriteIndexs)
+: mTypeId(id), mOpaque(opaque), mEmissiveAmount(emissiveAmount), mName(name), mSpriteIndex{spriteIndexs} {
   for(uint face = 0; face < NUM_FACE; face++) {
     uvec2 coords = spriteIndexToCoords(mSpriteIndex[face]);
 

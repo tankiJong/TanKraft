@@ -29,6 +29,9 @@ public:
     mCamera = &cam;
   };
 
+  void setWorld(const World* world) {
+    mWorld = world;
+  }
   ~VoxelRenderer();
 protected:
 
@@ -37,6 +40,14 @@ protected:
 	  float gFrameCount;
     float gRoughness;
     float gMetalness;
+    float gPlanetRadius;
+    vec3  gSunDir;
+    float ___padding0;
+    vec3  gRayleigh{5.5e1f, 13.0e1f, 22.4e1f};
+    float gSunPower = 20.f;
+    vec3  gMie{21e1, 21e1, 21e1};
+    vec2  gScatterThickness{110, 277};
+    vec2 ___padding1;
   };
 
   void updateFrameConstant(RHIContext& ctx);
@@ -73,7 +84,7 @@ protected:
   frame_data_t mFrameData {0, 0 };
   Mesh* mFrameMesh = nullptr;
   const Camera* mCamera = nullptr;
-
+  const World* mWorld = nullptr;
   RenderGraph mGraph;
 
   std::vector<ChunckRenderData> mFrameRenderData;

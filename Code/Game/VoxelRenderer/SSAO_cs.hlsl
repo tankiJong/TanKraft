@@ -56,7 +56,7 @@ void main( uint3 pixCoords : SV_DispatchThreadID ) {
 		position = p.xyz / p.w;
 	}
 	
-	seed = position.x * 901003 + 121143 * position.y + 179931 * position.z;
+	seed = pixCoords.x * 901003 + 121143 * pixCoords.y + 179931 * pixCoords.z;
 
 
 	float4 clip = mul(vp, float4(position, 1.f));

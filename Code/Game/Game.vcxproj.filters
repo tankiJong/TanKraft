@@ -64,6 +64,7 @@
     <None Include="VoxelRenderer\Common.hlsli" />
     <None Include="VoxelRenderer\GenGBuffer.hlsli" />
     <None Include="VoxelRenderer\DeferredShading.hlsli" />
+    <None Include="..\..\ReadMe.md" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="VoxelRenderer\GenGBuffer_ps.hlsl" />

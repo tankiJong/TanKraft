@@ -8,6 +8,7 @@
 #include "Engine/Gui/ImGui.hpp"
 #include "Engine/Debug/Log.hpp"
 #include "Engine/Core/Time/Clock.hpp"
+#include "Game/World/Chunk.hpp"
 
 static const vec3 MAX_ACCELERATION{ 1.f };
 
@@ -17,19 +18,19 @@ void CameraController::onInput() {
 
   {
     if(Input::Get().isKeyDown('W')) {
-      addForce({ mCamera.transfrom().right().xy().normalized(), 0 });
+      addForce({ mCamera.transform().right().xy().normalized(), 0 });
     }
     if(Input::Get().isKeyDown('S')) {
-      addForce({ -mCamera.transfrom().right().xy().normalized(), 0 });
+      addForce({ -mCamera.transform().right().xy().normalized(), 0 });
     }
   }
 
   {
     if (Input::Get().isKeyDown('D')) {
-      addForce({ -mCamera.transfrom().up().xy().normalized(), 0 });
+      addForce({ -mCamera.transform().up().xy().normalized(), 0 });
     }
     if (Input::Get().isKeyDown('A')) {
-      addForce({ mCamera.transfrom().up().xy().normalized(), 0 });
+      addForce({ mCamera.transform().up().xy().normalized(), 0 });
     }
   }
 
@@ -43,8 +44,8 @@ void CameraController::onInput() {
   }
 
   if(Input::Get().isKeyJustDown(KEYBOARD_SPACE)) {
-    mCamera.transfrom().localPosition() = vec3{-3, 0,0};
-    mCamera.transfrom().localRotation() = vec3::zero;
+    mCamera.transform().localPosition() = vec3{-3, 0,0};
+    mCamera.transform().localRotation() = vec3::zero;
   }
 
   if(Input::Get().isKeyJustDown('L')) {
@@ -53,13 +54,13 @@ void CameraController::onInput() {
 
   if (Input::Get().isKeyDown(MOUSE_MBUTTON)) {
     vec2 deltaMouse = Input::Get().mouseDeltaPosition();
-    addForce(-mCamera.transfrom().right() * deltaMouse.x / (float)GetMainClock().frame.second);
-    addForce(mCamera.transfrom().up() * deltaMouse.y / (float)GetMainClock().frame.second);
+    addForce(-mCamera.transform().right() * deltaMouse.x / (float)GetMainClock().frame.second);
+    addForce(mCamera.transform().up() * deltaMouse.y / (float)GetMainClock().frame.second);
   }
-  // if(Input::Get().isKeyDown(MOUSE_RBUTTON)) {
-  vec2 deltaMouse = Input::Get().mouseDeltaPosition(true);
-  addAngularForce(deltaMouse * 1000.f / (float)GetMainClock().frame.second);
-  // }
+  if(Input::Get().isMouseLocked()) {
+    vec2 deltaMouse = Input::Get().mouseDeltaPosition(true);
+    addAngularForce(deltaMouse * 1000.f / (float)GetMainClock().frame.second);
+  }
 
 
 }
@@ -84,11 +85,12 @@ void CameraController::onUpdate(float dt) {
     
     mCamera.rotate(angle);
 
-    mCamera.transfrom().localRotation().y
-     = clamp(mCamera.transfrom().localRotation().y,
+    mCamera.transform().localRotation().y
+     = clamp(mCamera.transform().localRotation().y,
                   -85.f, 85.f);
 
-
+    mCamera.transform().localPosition().z
+     = clamp<float>(mCamera.transform().localPosition().z, 0, Chunk::kSizeZ);
   }
 
   // transform.localRotation() = mCamera.transfrom().localRotation();
@@ -101,11 +103,11 @@ void CameraController::onUpdate(float dt) {
   // mCamera.transfrom().localRotation() = vec3::zero;
 
   // antanuation
-  mMoveSpeed = mMoveSpeed * 0;
-  mForce *= 0.f;
+  mMoveSpeed = vec3::zero;
+  mForce = vec3::zero;
   
-  mAngularSpeed = mAngularSpeed * .0f;
-  mAngularForce *= 0.f;
+  mAngularSpeed = vec3::zero;
+  mAngularForce = vec3::zero;
 }
 
 void CameraController::speedScale(float scale) {

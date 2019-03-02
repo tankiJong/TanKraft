@@ -13,6 +13,7 @@
 #include "Engine/Input/Input.hpp"
 #include "Engine/Math/Primitives/ray3.hpp"
 #include "Engine/Physics/contact3.hpp"
+#include "Engine/Debug/Log.hpp"
 
 void World::onInit() {
 
@@ -20,9 +21,9 @@ void World::onInit() {
 
   mCamera.setCoordinateTransform(gGameCoordsTransform);
   // mCamera.transfrom().setCoordinateTransform(gGameCoordsTransform);
-  mCamera.transfrom().setRotationOrder(ROTATION_YZX);
-  mCamera.transfrom().localPosition() = vec3{-10,1,120};
-  mCamera.transfrom().localRotation() = vec3{0,0,0};
+  mCamera.transform().setRotationOrder(ROTATION_YZX);
+  mCamera.transform().localPosition() = vec3{-10,1,120};
+  mCamera.transform().localRotation() = vec3{0,0,0};
 
   // TODO: look at is buggy
   // mCamera.lookAt({ -3, -3, 3 }, { 0, 0, 0 }, {0, 0, 1});
@@ -33,6 +34,8 @@ void World::onInit() {
   Debug::setCamera(&mCamera);
   Debug::setDepth(Debug::DEBUG_DEPTH_DISABLE);
   Debug::drawBasis(Transform());
+
+  
 }
 
 void World::onInput() {
@@ -43,13 +46,13 @@ void World::onInput() {
     mCameraController.speedScale((Input::Get().isKeyDown(KEYBOARD_SHIFT) ? 100.f : 10.f));
 
     float scale = mCameraController.speedScale();
-    vec3 camPosition = mCamera.transfrom().position();
-    vec3 camRotation = mCamera.transfrom().localRotation();
+    vec3 camPosition = mCamera.transform().position();
+    vec3 camRotation = mCamera.transform().localRotation();
     ImGui::Begin("Control");
     ImGui::Checkbox("Enable raycast", &mEnableRaycast);
     ImGui::SliderFloat("Camera speed", &scale, 1, 500, "%0.f", 10);
     ImGui::SliderFloat3("Camera Position", (float*)&camPosition, 0, 10);
-    ImGui::SliderFloat3("Camera Rotation", (float*)&mCamera.transfrom().localRotation(), -360, 360);
+    ImGui::SliderFloat3("Camera Rotation", (float*)&mCamera.transform().localRotation(), -360, 360);
     ImGui::End();
     mCameraController.speedScale(scale);
   }
@@ -62,13 +65,25 @@ void World::onInput() {
     if(mPlayerRaycast.impacted()) {
       BlockDef* air = BlockDef::get(0);
       mPlayerRaycast.contact.block.reset(*air);
+      mPlayerRaycast.contact.block.dirtyLight();
+      mPlayerRaycast.contact.block.chunk->markSavePending();
     }
   }
 
   if(Input::Get().isKeyJustDown(MOUSE_RBUTTON)) {
     if(mPlayerRaycast.impacted() && mPlayerRaycast.contact.distance > 0) {
-      BlockDef* stone = BlockDef::get("stone");
-      mPlayerRaycast.contact.block.next(mPlayerRaycast.contact.normal).reset(*stone);
+
+      BlockDef* light = nullptr;
+
+      if(Input::Get().isKeyDown(KEYBOARD_CONTROL)) {
+        light = BlockDef::get("light");
+      } else {
+        light = BlockDef::get("stone");
+      }
+      auto iter = mPlayerRaycast.contact.block.next(mPlayerRaycast.contact.normal);
+      iter.reset(*light);
+      iter.dirtyLight();
+      iter.chunk->markSavePending();
     }
   }
 
@@ -77,7 +92,7 @@ void World::onInput() {
     chunks.reserve(mActiveChunks.size());
 
     for(const auto& [coords, chunk]: mActiveChunks) {
-      if(chunk != nullptr) {
+      if(chunk->valid()) {
         chunks.push_back(coords);
       }
     }
@@ -95,9 +110,23 @@ void World::onUpdate() {
   updateChunks();
   manageChunks();
 
+  static bool debug_light = false;
+
+  if(Input::Get().isKeyJustDown(KEYBOARD_DOWN)) {
+    debug_light = !debug_light;
+  }
+  if(debug_light) {
+    if(Input::Get().isKeyJustDown(KEYBOARD_UP)) {
+      propagateLight(true);
+    }
+  } else {
+      propagateLight(false);
+  }
+
+
   if(mEnableRaycast) {
-    mPlayerRaycast = raycast(mCamera.transfrom().position(), 
-                              mCamera.transfrom().right().normalized(), 8);
+    mPlayerRaycast = raycast(mCamera.transform().position(), 
+                              mCamera.transform().right().normalized(), 8);
   } else {
     Debug::setDepth(Debug::eDebugDrawDepthMode::DEBUG_DEPTH_DISABLE);
     if(mPlayerRaycast.impacted()) {
@@ -117,7 +146,7 @@ void World::onUpdate() {
   }
 
   // Debug::drawPoint(mCamera.transfrom().position() + mCamera.transfrom().right(), .03f, 0);
-  Debug::drawBasis(mCamera.transfrom().position() + mCamera.transfrom().right(),
+  Debug::drawBasis(mCamera.transform().position() + mCamera.transform().right(),
                    vec3::right * .05f, vec3::up * .05f, vec3::forward * .05f, 0);
   if(mPlayerRaycast.impacted()) {
     Debug::setDepth(Debug::eDebugDrawDepthMode::DEBUG_DEPTH_ENABLE);
@@ -176,9 +205,8 @@ void World::onUpdate() {
 
 void World::onRender(VoxelRenderer& renderer) const {
   renderer.setCamera(mCamera);
-
   for(auto& [coords, chunk]: mActiveChunks) {
-    if(chunk == nullptr) continue;
+    if(chunk->invalid()) continue;
     renderer.issueChunk(chunk);
   }
 
@@ -191,7 +219,7 @@ void World::onDestroy() {
   chunks.reserve(mActiveChunks.size());
 
   for(const auto& [_, chunk]: mActiveChunks) {
-    if(chunk != nullptr) {
+    if(chunk->valid()) {
       chunks.push_back(chunk);
     }
   }
@@ -207,12 +235,13 @@ bool World::activateChunk(const ChunkCoords coords) {
   Chunk* chunk = allocChunk(coords);
   chunk->onInit();
   registerChunkToWorld(chunk);
+  chunk->afterRegisterToWorld();
   return true;
 }
 
 bool World::deactivateChunk(const ChunkCoords coords) {
   Chunk* chunk = unregisterChunkFromWorld(coords);
-  if(chunk == nullptr) {
+  if(chunk->invalid()) {
     return false;
   }
   chunk->onDestroy();
@@ -225,7 +254,7 @@ void World::registerChunkToWorld(Chunk* chunk) {
   {
     auto kv = mActiveChunks.find(chunk->coords());
     EXPECTS(kv == mActiveChunks.end() || 
-            kv->second == nullptr);
+            kv->second->invalid());
   }
 #endif
 
@@ -236,12 +265,13 @@ void World::registerChunkToWorld(Chunk* chunk) {
 owner<Chunk*> World::unregisterChunkFromWorld(const ChunkCoords& coords) {
   auto iter = mActiveChunks.find(coords);
   if(iter == mActiveChunks.end()) {
-    return nullptr;
+    return Chunk::invalidIter().chunk();
   };
   Chunk* chunk = iter->second;
-  iter->second = nullptr;
+  iter->second = Chunk::invalidIter().chunk();
 
-  if(chunk != nullptr) {
+  ENSURES(chunk != nullptr);
+  if(chunk->valid()) {
     chunk->onUnregisterFromWorld();
   }
   return chunk;
@@ -249,7 +279,7 @@ owner<Chunk*> World::unregisterChunkFromWorld(const ChunkCoords& coords) {
 
 Chunk* World::findChunk(const ChunkCoords& coords) {
   const auto iter = mActiveChunks.find(coords);
-  return iter == mActiveChunks.end() ? nullptr : iter->second;
+  return iter == mActiveChunks.end() ? Chunk::invalidIter().chunk() : iter->second;
 }
 
 const Chunk* World::findChunk(const ChunkCoords& coords) const {
@@ -275,7 +305,8 @@ World::raycast_result_t World::raycast(const vec3& start, const vec3& dir, float
   Chunk* chunk = findChunk(start);
 
   // fail to find the chunk
-  if(chunk == nullptr) return result;
+
+  if(chunk->invalid()) return result;
 
   // found chunk, start ray casting
 
@@ -298,6 +329,7 @@ World::raycast_result_t World::raycast(const vec3& start, const vec3& dir, float
 
     if(!chunk->bounds().contains(currentPos)) {
       chunk = findChunk(currentPos);
+      // GUARANTEE_RECOVERABLE(chunk->valid(), "got invalid chunk");
     }
 
     Chunk::BlockIter next = chunk->blockIter(currentPos);
@@ -322,10 +354,27 @@ World::raycast_result_t World::raycast(const vec3& start, const vec3& dir, float
   return result;
 }
 
+void World::submitDirtyBlock(const Chunk::BlockIter& block) {
+  mLightDirtyList.push_back(block);
+}
+
+owner<Mesh*> World::aquireDebugLightDirtyMesh() const {
+  Mesher ms;
+
+  ms.begin(DRAW_TRIANGES);
+  for(auto block: mLightDirtyList) {
+    ms.color(Rgba::yellow);
+    ms.cube(block.bounds().center(), vec3::one * .01f);
+  }
+  ms.end();
+
+  return ms.createMesh<>();
+}
+
 void World::updateChunks() {
 
   for(auto& [coords, chunk]: mActiveChunks) {
-    if(chunk != nullptr) chunk->onUpdate();
+    if(chunk->valid()) chunk->onUpdate();
   }
   
 }
@@ -340,7 +389,7 @@ void World::manageChunks() {
     ChunkCoords coords = playerChunkCoords + idx;
   
     Chunk* chunk = findChunk(coords);
-    if(chunk == nullptr) {
+    if(chunk->invalid()) {
       activateChunk(coords);
       activatedChunkCount++;
     }
@@ -354,7 +403,7 @@ void World::manageChunks() {
     ChunkCoords coords = playerChunkCoords + idx;
 
     Chunk* chunk = findChunk(coords);
-    if(chunk != nullptr && chunk->isDirty()) {
+    if(chunk->valid() && chunk->isDirty()) {
       if(chunk->reconstructMesh()) {
         reconstructedMeshCount++;
       }
@@ -376,8 +425,94 @@ void World::manageChunks() {
 
 }
 
+static void updateBlockLight(const Chunk::BlockIter& iter, std::deque<Chunk::BlockIter>& pending) {
+  EXPECTS(iter.valid());
+  uint8_t oldOutdoorLight = iter->outdoorLight();
+  uint8_t newOutdoorLight = 0;
+
+  uint8_t oldIndoorLight = iter->indoorLight();
+  uint8_t newIndoorLight = iter->type().emissive();
+
+  Chunk::BlockIter neighbors[6] = {
+    iter.nextNegX(),
+    iter.nextNegY(),
+    iter.nextNegZ(),
+    iter.nextPosX(),
+    iter.nextPosY(),
+    iter.nextPosZ()
+  };
+
+  bool opaque = iter->opaque();
+  
+  // init update outdoor lighting
+  Chunk::BlockIter topBlock = neighbors[5];
+  if((topBlock->exposedToSky() && !opaque)
+     || !topBlock.valid() // I am detecting very top block
+     ) {
+    newOutdoorLight = Block::kMaxOutdoorLight;
+  }
+
+  if(!opaque) {
+    for(auto block: neighbors){
+      if(block.valid()) {
+        if(newIndoorLight + 1 < block->indoorLight()) {
+          Block& b = *block;
+          newIndoorLight = b.indoorLight() - 1;
+        }
+        if(newOutdoorLight + 1 < block->outdoorLight()) {
+          Block& b = *block;
+          uint xx = block->outdoorLight() - 1;
+          newOutdoorLight = xx;
+        }
+      }
+    }
+  }
+
+
+  bool needToDirtyNeighbors = (oldIndoorLight != newIndoorLight) || (oldOutdoorLight != newOutdoorLight);
+
+  if(needToDirtyNeighbors) {
+    iter->setIndoorLight(newIndoorLight);
+    iter->setOutdoorLight(newOutdoorLight);
+    iter.chunk->setDirty();
+    for(auto block: neighbors) {
+      if(!block->dirty() && !block->opaque() && block.valid()) {
+        block->setDirty();
+        pending.push_back(block);
+      }
+    }
+  }
+
+  iter->clearDirty();
+  
+}
+
+void World::propagateLight(bool step) {
+
+  if(step) {
+    Log::logf("dirty block count: %u", mLightDirtyList.size());
+    std::deque<Chunk::BlockIter> blocksToUpdate;
+    std::swap(blocksToUpdate, mLightDirtyList);
+
+    while(!blocksToUpdate.empty()) {
+      auto block = blocksToUpdate.front();
+      blocksToUpdate.pop_front();
+      updateBlockLight(block, mLightDirtyList);
+    }
+  } else {
+    while(!mLightDirtyList.empty()) {
+      // OutputDebugStringA(Stringf("dirty block count: %u\n", mLightDirtyList.size()).c_str());
+      Chunk::BlockIter block = mLightDirtyList.front();
+      mLightDirtyList.pop_front();
+      EXPECTS(block.valid());
+      updateBlockLight(block, mLightDirtyList);
+    }
+  }
+
+}
+
 vec3 World::playerPosition() {
-  return mCamera.transfrom().position();
+  return mCamera.transform().position();
 }
 
 std::vector<ChunkCoords> World::sChunkActivationVisitingPattern{};

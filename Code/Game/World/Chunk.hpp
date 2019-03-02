@@ -32,6 +32,7 @@ public:
   static BlockCoords fromIndex(BlockIndex index);
   static aabb3 blockBounds(Chunk* chunk, BlockIndex index);
   static aabb3 blockBounds(Chunk* chunk, const BlockCoords& coords);
+  static BlockIndex toIndex(BlockIndex x, BlockIndex y, BlockIndex z);
 };
 
 class ChunkCoords: public ivec2 {
@@ -62,6 +63,8 @@ namespace std {
 }
 
 class Chunk {
+  static Chunk sInvalidChunk;
+  Chunk() = default;
 public:
   
   static constexpr BlockIndex kSizeBitX = 4;
@@ -94,12 +97,11 @@ public:
     friend class Chunk;
 
   public:
-
     void step(eNeighbor dir);
     void step(const ChunkCoords& deltaCoords);
     Iterator operator+(const ChunkCoords& deltaCoords) const;
 
-    bool valid() const { return self != nullptr; }
+    bool valid() const { return self != &sInvalidChunk; }
 
     Chunk* operator->() const { return self; }
     Chunk& operator*() const { return *self; }
@@ -107,9 +109,10 @@ public:
     bool operator==(const Iterator& rhs) const { return self == rhs.self; }
     bool operator!=(const Iterator& rhs) const { return self != rhs.self; }
 
+    Chunk* chunk() const { return self; }
   protected:
-    Iterator(Chunk* chunk): self(chunk) {}
-    Chunk* self = nullptr;
+    Iterator(Chunk& chunk): self(&chunk) {}
+    Chunk* self = &sInvalidChunk;
 
   };
 
@@ -117,8 +120,8 @@ public:
     friend class Chunk;
 
   public:
-    BlockIter(Chunk* c, BlockCoords crds);
-    BlockIter(Chunk* c, BlockIndex index);
+    BlockIter(Chunk& c, BlockCoords crds);
+    BlockIter(Chunk& c, BlockIndex index);
     BlockIter next(const BlockCoords& deltaCoords) const;
     BlockIter nextNegX() const;
     BlockIter nextPosX() const;
@@ -136,8 +139,16 @@ public:
     bool valid() const;
 
     void reset(BlockDef& def);
+    void dirtyLight();
+
     aabb3 bounds() const {
       return BlockCoords::blockBounds(chunk.self, blockIndex);
+    }
+    BlockCoords coords() const {
+      return BlockCoords::fromIndex(blockIndex);
+    }
+    BlockIndex index() const {
+      return blockIndex;
     }
     BlockIter operator+(const BlockCoords& deltaCoords) const;
 
@@ -153,6 +164,7 @@ public:
   };
 
   void onInit();
+  void afterRegisterToWorld();
   void onUpdate();
 
   Mesh* mesh() const { return mMesh; }
@@ -170,12 +182,13 @@ public:
   bool reconstructMesh();
 
   Iterator iterator();
-  BlockIter blockIter(const BlockCoords& coords) { return { this, coords }; };
+  BlockIter blockIter(const BlockCoords& coords) { return { *this, coords }; };
+  BlockIter blockIter(BlockIndex index) { return { *this, index }; };
   BlockIter blockIter(const vec3& world);
 
-  Iterator neighbor(eNeighbor loc) const { return { mNeighbors[loc] }; }
+  Iterator neighbor(eNeighbor loc) const { return { *mNeighbors[loc] }; }
 
-  void setNeighbor(eNeighbor loc, Chunk* chunk) { mNeighbors[loc] = chunk; }
+  void setNeighbor(eNeighbor loc, Chunk& chunk) { mNeighbors[loc] = &chunk; }
 
   void onRegisterToWorld(World* world);
   void onUnregisterFromWorld();
@@ -184,20 +197,33 @@ public:
   void deserialize(byte_t* data, size_t maxRead);
 
   void markSavePending() { mSavePending =true;}
+
+  bool valid() const;
+  bool invalid() const { return !valid(); }
+
+  static Iterator invalidIter() { return { sInvalidChunk }; }
+
+  void resetBlock(BlockIndex index, BlockDef& def);
 protected:
+
   void addBlock(const BlockIter& block, const vec3& pivot);
+  void markBlockLightDirty(const BlockIter& block);
+
   void generateBlocks();
+  void initLights();
   bool neighborsLoaded() const;
   std::array<Block, kTotalBlockCount> mBlocks; // 0xffff
   ChunkCoords mCoords;
   std::array<Chunk*, NUM_NEIGHBOR> mNeighbors 
-    { nullptr, nullptr, nullptr, nullptr, };
+    { &sInvalidChunk, &sInvalidChunk, &sInvalidChunk, &sInvalidChunk, };
   owner<Mesh*> mMesh = nullptr;
   Mesher mMesher;
-  bool mIsDirty = true;
   World* mOwner = nullptr;
   aabb3 mBounds;
+  
   bool mSavePending = false;
+  bool mIsDirty = true;
+
 };
 
 inline BlockIndex BlockCoords::toIndex() const {
@@ -217,4 +243,15 @@ inline BlockCoords BlockCoords::fromIndex(BlockIndex index) {
   return { Chunk::kSizeMaskX & index, 
           (Chunk::kSizeMaskY & index) >> Chunk::kSizeBitX,
           (Chunk::kSizeMaskZ & index) >> (Chunk::kSizeBitX + Chunk::kSizeBitY) };
+}
+
+inline bool Chunk::valid() const {
+  EXPECTS(this != nullptr);
+  return this != &sInvalidChunk;
+}
+
+inline BlockIndex BlockCoords::toIndex(BlockIndex x, BlockIndex y, BlockIndex z) {
+  return (x & Chunk::kSizeMaskX)
+        | ((y << Chunk::kSizeBitX) & Chunk::kSizeMaskY)
+        | ((z << (Chunk::kSizeBitX + Chunk::kSizeBitY)) & Chunk::kSizeMaskZ);
 }

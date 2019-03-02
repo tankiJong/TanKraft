@@ -48,6 +48,14 @@ cbuffer cFrameData: register(b0) {
 	float gFrameCount;
 	float gRoughness;
 	float gMetallic;
+	float gPlanetRadius;
+	float3 gSunDir;
+	float ___cFrameDatapadding0;
+	float3  gRayleigh;
+	float gSunPower;
+	float3  gMie;
+	float2 gScatterThickness;
+	float2 ___cFrameDatapadding1;
 }
 
 cbuffer cCamera : register(b1) {

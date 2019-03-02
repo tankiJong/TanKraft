@@ -27,13 +27,15 @@ public:
   };
 
   BlockDef();
-  BlockDef(block_id_t id, bool opaque, std::string_view name, const std::array<uint, NUM_FACE>& spriteIndexs);
+  BlockDef(block_id_t id, bool opaque, uint8_t emissiveAmount, std::string_view name, const std::array<uint, NUM_FACE>& spriteIndexs);
 
   const aabb2& uvs(eFace face) const {
     return mSpriteUVs[face];
   };
   block_id_t id() const { return mTypeId; }
   bool opaque() const { return mOpaque; }
+  uint8_t emissive() const { return mEmissiveAmount; }
+
   static BlockDef* get(std::string_view defName);
   static BlockDef* get(block_id_t id);
   static constexpr uint spriteCoordsToIndex(uint x, uint y) { return x + y * (uint)kSpritesheetUnitCountX; }
@@ -44,6 +46,7 @@ protected:
   static std::array<BlockDef, kTotalBlockDef> sBlockDefs;
   block_id_t mTypeId = 255;
   std::string mName = "invalid";
+  uint8_t mEmissiveAmount = 0;
   bool mOpaque = false;
   std::array<uint, NUM_FACE> mSpriteIndex = { 255 };
   std::array<aabb2, NUM_FACE> mSpriteUVs;
