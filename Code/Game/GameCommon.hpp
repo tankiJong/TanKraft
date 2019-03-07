@@ -9,6 +9,7 @@ class BitmapFont;
 class Window;
 class Console;
 class Camera;
+class Clock;
 extern const    char* APP_NAME;
 extern unsigned char  g_isCheating;
 
@@ -29,3 +30,5 @@ constexpr float SCREEN_WIDTH = SCREEN_HALF_WIDTH * 2.f; // units
 constexpr float SCREEN_HEIGHT = SCREEN_HALF_HEIGHT * 2.f; // units
 
 extern const mat44 gGameCoordsTransform;
+
+extern Clock* gGameClock;

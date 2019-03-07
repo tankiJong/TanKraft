@@ -9,8 +9,20 @@ PSOutput main(PSInput input)
 	// float4 texColor = input.color;
   // output.color = float4(
 	// 	PhongLighting(input.worldPosition, input.normal, texColor.xyz, input.eyePosition), 1.f);
+	
+	float3 indoorLight = input.color.x  * float3(1.f, 0.9f, 0.8f);
 
-	output.color = texColor;
+	float timeInDay = gTime / 86400.f;
+	timeInDay = timeInDay - floor(timeInDay);
+
+	float ambientStrength = input.color.y * (lerp(0.1, 1, -cos(2 * 3.1415926 * timeInDay) * .5f + .5f) + gWorldConstant.x);
+	ambientStrength = clamp(ambientStrength, 0, 1.3f);
+	float3 ambientLight = ambientStrength * float3(.8f, .9f, 1.f);
+	ambientLight *= ambientStrength;
+
+
+
+	output.color = texColor * float4(max(indoorLight, ambientLight), 1.f);
 	output.normal = float4(input.normal * .5f + .5f, 1.f);
 	output.tangent = float4(input.tangent * .5f + .5f, 1.f);
 

@@ -59,7 +59,7 @@ bool isect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(float) t0, _inout
 }
 
 #define earth_radius gPlanetRadius	 /*meter*/
-#define atmosphere_radius (gPlanetRadius + 1000) /*meter*/
+#define atmosphere_radius (gPlanetRadius + gPlanetAtmosphereThickness) /*meter*/
 
 // scattering coefficients at sea level (m)
 #define betaR gRayleigh /* Rayleigh */
@@ -148,16 +148,11 @@ bool get_sun_light(
 	return true;
 }
 
-float3 get_incident_light(_in(ray_t) ray)
-{
-	// "pierce" the atmosphere with the viewing ray
-	float t0 = 0, t1 = 0;
-	if (!isect_sphere(
-		ray, atmosphere(), t0, t1)) {
-		return 0.f.xxx;
-	}
 
-	float march_step = t1 / float(num_samples);
+float3 get_incident_light(_in(ray_t) ray, float end)
+{
+
+	float march_step = end / float(num_samples);
 
 	// cosine of angle between view and light directions
 	float mu = dot(ray.direction, sun_dir);
@@ -222,11 +217,28 @@ float3 get_incident_light(_in(ray_t) ray)
 		march_pos += march_step;
 	}
 
+	// float timeInDay = gTime / 86400.f;
+	// timeInDay = timeInDay - floor(timeInDay);
+	// float ambientStrength = lerp(.1, 2, -cos(2 * 3.1415926 * timeInDay) * .5f + .5f);
 	return
-		sun_power *
+		sun_power * 
 		(sumR * phaseR * betaR +
 		sumM * phaseM * betaM);
 }
+
+
+float3 get_incident_light(_in(ray_t) ray)
+{
+	// "pierce" the atmosphere with the viewing ray
+	float t0 = 0, t1 = 0;
+	if (!isect_sphere(
+		ray, atmosphere(), t0, t1)) {
+		return 0.f.xxx;
+	}
+
+	return get_incident_light(ray, t1);
+}
+
 
 float3 jodieReinhardTonemap(float3 c){
     float l = dot(c, float3(0.2126, 0.7152, 0.0722));
@@ -235,7 +247,7 @@ float3 jodieReinhardTonemap(float3 c){
     return lerp(c / (l + 1.0), tc, tc);
 }
 	// https://www.shadertoy.com/view/XtBXDz
-float3 SkyColor(float height, float3 direction) {
+float3 SkyColor(float height, float3 direction, float end) {
 
 	height = earth_radius + (height - gPlanetRadius) / 256 * (atmosphere_radius - earth_radius) * .1f;
 
@@ -250,11 +262,11 @@ float3 SkyColor(float height, float3 direction) {
 
 	float t0 = 0, t1 = 0;
 	
-	if (isect_sphere(ray, s, t0, t1) && t0 > 0) {
-		return .333f.xxx;
-	} else {
-		return (get_incident_light(ray));
-	}
+	// if (isect_sphere(ray, s, t0, t1) && t0 > 0) {
+	// 	return .333f.xxx;
+	// } else {
+		return (get_incident_light(ray, end));
+	// }
 }
 
 
@@ -262,7 +274,7 @@ float3 depthToWorld(float2 uv, float depth) {
 	float4x4 vp = mul(projection, view);
 	float4x4 inverCamVP = inverse(vp);
 	float2 _uv = float2(uv.x, 1 - uv.y);
-	float3 ndc = float3(_uv * 2.f - 1.f, .5f);
+	float3 ndc = float3(_uv * 2.f - 1.f, depth);
 	float4 world = mul(inverCamVP, float4(ndc, 1.f));
 	world = world / world.w;
 
@@ -287,12 +299,11 @@ PSOutput main(PostProcessingVSOutput input)
 	float4 camPosition = mul(inverse(view), float4(0,0,0,1));
 	camPosition /= camPosition.w;
 
+	float distFromCam = distance(camPosition.xyz, position);
+
 	const float3 planetCenterW = float3(0, 0, -gPlanetRadius);
 	const float3 planetCenterV = planetCenterW - camPosition.xyz;
 	// transform to planet space	()
-	
-	float3 I = normalize(position - camPosition.xyz);
-	float3 R = reflect(I, normalize(normal)).xyz;
 
 	float3 world = depthToWorld(input.tex, .5f);
 
@@ -306,14 +317,23 @@ PSOutput main(PostProcessingVSOutput input)
 		    1,  0, 0
 	};
 	float factor = length(normal) < 0.5f ? 0 : 1;
-	float3 sampleDirection = R * factor + clamp(normalize(direction), -1.f.xxx, 1.f.xxx) * ( 1 - factor);
-	float3 samplePosition = position * factor + camPosition * (1 - factor);
+	float3 sampleDirection = clamp(normalize(direction), -1.f.xxx, 1.f.xxx);
+	float3 samplePosition = position * factor + camPosition.xyz * (1 - factor);
 	// float4 sky = gSky.Sample(gSampler, samplePosition);
 	float3 cameraOnPlanet = -planetCenterV;
 
-		float3 height = gPlanetRadius + samplePosition.z;
-		float3 fdirection = float3(-sampleDirection.y, sampleDirection.z, sampleDirection.x);;
-		float4 sky = float4(SkyColor(height, fdirection), 1.f);
+		float height = gPlanetRadius + samplePosition.z;
+		float3 fdirection = float3(-sampleDirection.y, sampleDirection.z, sampleDirection.x);
+		
+		float t0 = 0, t1 = 0;
+
+		ray_t ray;
+		ray.origin = camPosition.xyz;
+		ray.direction = fdirection;
+
+		isect_sphere( ray, atmosphere(), t0, t1 );
+		// float4 sceneScatter = float4(SkyColor(height, fdirection, distFromCam), 1.f);
+		float4 skyScatter = float4(SkyColor(height, fdirection, t1), 1.f);
 	
 
 	float3 tan = normalize(gTexTangent.Sample(gSampler, input.tex).xyz * 2.f - 1.f);
@@ -326,7 +346,7 @@ PSOutput main(PostProcessingVSOutput input)
 	gLights.GetDimensions(total, _);
 
 
-	float3 eye = normalize(camPosition.xyz - position);
+	// float3 eye = normalize(camPosition.xyz - position);
 
 	// float3 finalColor = color.xyz * .1f;
 	float3 finalColor = 0.f.xxx;
@@ -343,13 +363,29 @@ PSOutput main(PostProcessingVSOutput input)
 	 */
 	// finalColor += pbrIndirectLighting(diffuse, 1.f.xxx, 1.f.xxx);
 	// finalColor += pbrEnvironmentLighting(color.xyz, normal, gRoughness, gMetallic, 1, eye, 1.f.xxx);
+	float timeInDay = gTime / 86400.f;
+	timeInDay = timeInDay - floor(timeInDay);
+	float ambientStrength = lerp(0.f, 1.f, -cos(2 * 3.1415926 * timeInDay) * .5f + .5f);
 
 	float ao = gTexAO.Sample(gSampler, input.tex).x;
 	finalColor += color.xyz * ao;
+	ao = clamp(0, 1, ao + lerp(.5f, 0.f, ambientStrength));
 
-	output.color = float4(saturate(finalColor), 1);
+	finalColor = saturate(finalColor);
 
-	output.color = (output.color * .7f + sky * .3f) * ao * factor
-	 								+ sky * (1 - factor);
+
+	float skyBlendFactor = (distFromCam - gViewDistance.x) / (gViewDistance.y - gViewDistance.x);
+	skyBlendFactor = clamp(skyBlendFactor, 0, 1);
+
+	// output.color = float4(skyBlendFactor, 0, 0, 1);
+	// return output;
+	skyBlendFactor = smoothstep(0, 1, skyBlendFactor);
+
+	finalColor = finalColor * ao * ( 1 - skyBlendFactor) + skyScatter.xyz * skyBlendFactor;
+	// finalColor = lerp(finalColor, 1.f.xxx, gWorldConstant.x);
+
+	output.color = float4( finalColor, 1 )  * factor
+	 								+ skyScatter * (1 - factor);
+
 	return output;
 }

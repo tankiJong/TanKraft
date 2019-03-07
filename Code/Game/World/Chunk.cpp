@@ -613,9 +613,9 @@ void Chunk::addBlock(const BlockIter& block, const vec3& pivot) {
   }
 
 void Chunk::markBlockLightDirty(const BlockIter& block) {
-  if(block->dirty()) return;
+  if(block->lightDirty()) return;
   mOwner->submitDirtyBlock(block);
-  block->setDirty();
+  block->setLightDirty();
 };
 
 void Chunk::generateBlocks() {

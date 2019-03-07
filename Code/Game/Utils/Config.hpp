@@ -7,4 +7,5 @@ struct Config {
   static uint kMaxChunkActivatePerFrame;
   static uint kMaxChunkDeactivatePerFrame;
   static uint kMaxChunkReconstructMeshPerFrame;
+  static float kWorldTimeScale;
 };

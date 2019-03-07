@@ -9,7 +9,7 @@ class Block {
   friend class Chunk;
 public:
   static constexpr uint8_t kOpaqueFlag = BIT_FLAG(0);
-  static constexpr uint8_t kDirtyFlag  = BIT_FLAG(1);
+  static constexpr uint8_t kLightDirtyFlag  = BIT_FLAG(1);
 
   static constexpr uint8_t kOutdoorLightMask = 0xf0;
   static constexpr uint8_t kIndoorLightMask  = 0x0f;
@@ -20,7 +20,7 @@ public:
   block_id_t id() const { return mType; }
   const BlockDef& type() const;
   bool opaque() const { return mBitFlags & kOpaqueFlag; }
-  bool dirty() const  { return mBitFlags & kDirtyFlag;  }
+  bool lightDirty() const  { return mBitFlags & kLightDirtyFlag;  }
 
   uint8_t indoorLight() const { return mLight & kIndoorLightMask; }
   uint8_t outdoorLight() const { return (mLight & kOutdoorLightMask) >> 4; }
@@ -29,8 +29,8 @@ public:
   void setOutdoorLight(uint8_t amount) { mLight = ((amount << 4) & kOutdoorLightMask) | (mLight & (~kOutdoorLightMask)); }
   void setSky() { setOutdoorLight(kMaxOutdoorLight); }
   bool exposedToSky() const { return outdoorLight() == kMaxOutdoorLight; }
-  void setDirty() { mBitFlags = mBitFlags | kDirtyFlag; }
-  void clearDirty() { mBitFlags = mBitFlags & (~kDirtyFlag); }
+  void setLightDirty() { mBitFlags = mBitFlags | kLightDirtyFlag; }
+  void clearLightDirty() { mBitFlags = mBitFlags & (~kLightDirtyFlag); }
 
   static Block kInvalid;
 protected:

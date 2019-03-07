@@ -40,15 +40,17 @@ protected:
 	  float gFrameCount;
     float gRoughness;
     float gMetalness;
-    float gPlanetRadius;
+    float gPlanetRadius{100000};
     vec3  gSunDir;
-    float ___padding0;
+    float gPlanetAtmosphereThickness{25000};
     vec3  gRayleigh{5.5e1f, 13.0e1f, 22.4e1f};
     float gSunPower = 20.f;
     vec3  gMie{21e1, 21e1, 21e1};
-    vec2  gScatterThickness{110, 277};
-    vec2 ___padding1;
+    vec2  gScatterThickness{698, 2500};
+    vec2  gViewDistance;
+    vec4  gWorldConstant; // x: lighting strike, y: flame flicker
   };
+
 
   void updateFrameConstant(RHIContext& ctx);
   void updateViewConstant(RHIContext& ctx);

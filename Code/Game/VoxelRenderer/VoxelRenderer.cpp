@@ -25,6 +25,7 @@
 #include "Engine/File/FileSystem.hpp"
 #include "Game/World/World.hpp"
 #include "Game/Utils/Config.hpp"
+#include "Game/GameCommon.hpp"
 
 // DFS TODO: add ConstBuffer class66
 
@@ -84,7 +85,9 @@ void VoxelRenderer::onLoad(RHIContext&) {
   // constructFrameMesh();
   defineRenderPasses();
 
-  mFrameData.gPlanetRadius = 1000;
+
+  mFrameData.gViewDistance.x = Config::kMaxActivateDistance - 20;
+  mFrameData.gViewDistance.y = Config::kMaxActivateDistance;
 }
 
 void VoxelRenderer::onRenderFrame(RHIContext& ctx) {
@@ -372,28 +375,32 @@ void VoxelRenderer::constructTestSphere() {
 
 void VoxelRenderer::updateFrameConstant(RHIContext&) {
   mFrameData.gFrameCount++;
-  mFrameData.gTime = (float)GetMainClock().total.second;
-
-  static float time = 0;
+  mFrameData.gTime += (float)gGameClock->frame.second;
+  mFrameData.gWorldConstant.x = mWorld->currentLightningStrikeLevel();
+  mFrameData.gWorldConstant.y = mWorld->currentLightFlickLevel();
   static vec3  gRayleigh{5.5f, 13.0f, 22.4f};
   static vec3 gMie{21, 21, 21};
-  static float  scaleRayleigh = 0.0001225, scaleMie = 0.0000012;
+  static float  scaleRayleigh = 0.00001800, scaleMie = 0.0000001119;
 
-  time += GetMainClock().frame.second;
+  float dayaPrecent = mFrameData.gTime / 86400.f;
 
   {
     ImGui::Begin("Constants");
-      ImGui::SliderFloat("Planet Radius", &mFrameData.gPlanetRadius, Config::kMaxActivateDistance, 10000);
-      ImGui::SliderFloat("Time", &time, 0, 1);
+      ImGui::DragFloat("Planet Radius", &mFrameData.gPlanetRadius, 100, Config::kMaxActivateDistance, 1e7);
+      ImGui::DragFloat("Atmosphere Thickness", &mFrameData.gPlanetAtmosphereThickness, 10, 100, mFrameData.gPlanetRadius);
+      ImGui::SliderFloat("Time", &dayaPrecent, 0, 1);
       ImGui::SliderFloat("Sun Power", &mFrameData.gSunPower, 1, 100, "%.1f");
-      ImGui::DragFloat("Rayleigh scale", &scaleRayleigh, 0.0000001, 0.0000001, 1, "%.10f");
-      ImGui::DragFloat("Mie scale", &scaleMie, 0.0000001, 0.0000001, 1, "%.10f");
+      ImGui::DragFloat("Rayleigh factor scale", &scaleRayleigh, 0.0000001, 0.0000001, 1, "%.10f");
+      ImGui::DragFloat3("Rayleigh Factor", (float*)&gRayleigh, 0.01, 0, 100, "%.3f");
+      ImGui::DragFloat("Mie scale", &scaleMie, 0.000000001, 0, 1, "%.10f");
+      ImGui::DragFloat3("Mie Factor", (float*)&gMie, 0.01, 0, 100, "%.3f");
       ImGui::DragFloat2("Scatter Thickness: Raylegigh/Mie", (float*)&mFrameData.gScatterThickness, 1, 10, 10000);
     ImGui::End();
   }
   mFrameData.gRayleigh = gRayleigh * scaleRayleigh;
   mFrameData.gMie = gMie * scaleMie;
-  mFrameData.gSunDir = vec3(0, sinf(time * .1f), cosf(time * .1f));
+
+  mFrameData.gSunDir = vec3(0, sinf(dayaPrecent * 2 * PI - .5f * PI), cosf(dayaPrecent * 2 * PI - .5f * PI));
   mCFrameData->updateData(mFrameData);
 
   // mGDepth = RHIDevice::get()->depthBuffer();

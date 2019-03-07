@@ -12,13 +12,13 @@ struct light_t {
 	float4 color;
 };
 
-Texture2D gTexAlbedo:   register(t0);
-Texture2D gTexNormal:   register(t1);
-Texture2D gTexTangent:   register(t2);
-Texture2D gTexBitangent:   register(t3);
-Texture2D gTexPosition:   register(t4);
-Texture2D gTexAO:   register(t5);
-Texture2D gTexDepth:   register(t6);
+Texture2D<float4> gTexAlbedo:   register(t0);
+Texture2D<float4> gTexNormal:   register(t1);
+Texture2D<float4> gTexTangent:   register(t2);
+Texture2D<float4> gTexBitangent:   register(t3);
+Texture2D<float4> gTexPosition:   register(t4);
+Texture2D<float4> gTexAO:   register(t5);
+Texture2D<float4> gTexDepth:   register(t6);
 StructuredBuffer<light_info_t> gLights: register(t7);
 TextureCube<float4> gSky: register(t8);
 // Texture2D gTexSpecular: register(t2);

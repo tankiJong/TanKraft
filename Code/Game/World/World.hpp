@@ -4,6 +4,7 @@
 #include "Game/World/Chunk.hpp"
 #include "Engine/Graphics/Camera.hpp"
 #include "Game/CameraController.hpp"
+#include "Engine/Memory/RingBuffer.hpp"
 
 class Chunk;
 class VoxelRenderer;
@@ -50,6 +51,12 @@ public:
   void submitDirtyBlock(const Chunk::BlockIter& block);
 
   owner<Mesh*> aquireDebugLightDirtyMesh() const;
+
+  float currentLightningStrikeLevel() const { return mWeatherNoiseSample.front(); }
+  float currentLightFlickLevel() const { return mFlameNoiseSample.front(); }
+
+  void onEndFrame();
+
 protected:
 
   Chunk* allocChunk(ChunkCoords coords) { return new Chunk(coords); }
@@ -70,6 +77,10 @@ protected:
   std::deque<Chunk::BlockIter> mLightDirtyList;
 
   bool mEnableRaycast = true;
+
+  RingBuffer mWeatherNoiseSample;
+  RingBuffer mFlameNoiseSample;
+
   static std::vector<ChunkCoords> sChunkActivationVisitingPattern;
   static std::vector<ChunkCoords> sChunkDeactivationVisitingPattern;
   static void reconstructChunkVisitingPattern();

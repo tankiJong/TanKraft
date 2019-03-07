@@ -14,6 +14,7 @@
 #include "Engine/Math/Primitives/ray3.hpp"
 #include "Engine/Physics/contact3.hpp"
 #include "Engine/Debug/Log.hpp"
+#include "Engine/Math/Noise/SmoothNoise.hpp"
 
 void World::onInit() {
 
@@ -61,6 +62,13 @@ void World::onInput() {
     mEnableRaycast = !mEnableRaycast;
   }
 
+  if(Input::Get().isKeyDown('T')) {
+    gGameClock->scale(10000);
+  } else {
+    gGameClock->scale(200);
+  }
+
+
   if(Input::Get().isKeyJustDown(MOUSE_LBUTTON)) {
     if(mPlayerRaycast.impacted()) {
       BlockDef* air = BlockDef::get(0);
@@ -105,6 +113,35 @@ void World::onInput() {
 
 void World::onUpdate() {
   float dt = (float)GetMainClock().frame.second;
+
+  {
+    ImGui::Begin("Environment Noises");
+    {
+      float noise = Compute1dPerlinNoise(
+        float(gGameClock->total.second) / 86400.f, .003, 9);
+      noise = rangeMap(noise, .5f, .9f, 0.f, 1.f);
+      noise = clampf01(noise);
+      size_t writeIndex = mWeatherNoiseSample.push(noise);
+      ImGui::PlotLines("Weather", (const float*)&mWeatherNoiseSample, 
+                       (int)mWeatherNoiseSample.capacity(), (int)writeIndex, 
+                       "", 0.f, 1.f, ImVec2{0, 80});
+    }
+
+    {
+      float noise = Compute1dPerlinNoise(float(gGameClock->total.second) / 86400.f, .005, 9);
+      noise = rangeMap(noise, -1.f, 1.f, .8f, 1.f);
+      // noise = clampf01(noise);
+      noise = 0;
+      size_t writeIndex = mFlameNoiseSample.push(noise);
+      ImGui::PlotLines("Flame Flicker", (const float*)&mFlameNoiseSample, 
+                       (int)mFlameNoiseSample.capacity(), (int)writeIndex, 
+                       "", .8f, 1.f, ImVec2{0, 80});
+      
+    }
+    ImGui::End();
+  }
+
+
   mCameraController.onUpdate(dt);
 
   updateChunks();
@@ -200,7 +237,6 @@ void World::onUpdate() {
     Debug::setDepth(Debug::eDebugDrawDepthMode::DEBUG_DEPTH_DISABLE);
 
   }
-
 }
 
 void World::onRender(VoxelRenderer& renderer) const {
@@ -371,6 +407,16 @@ owner<Mesh*> World::aquireDebugLightDirtyMesh() const {
   return ms.createMesh<>();
 }
 
+void World::onEndFrame() {
+  if(!mWeatherNoiseSample.empty()) {
+    mWeatherNoiseSample.pop();
+  }
+  
+  if(!mFlameNoiseSample.empty()) {
+    mFlameNoiseSample.pop();
+  }
+}
+
 void World::updateChunks() {
 
   for(auto& [coords, chunk]: mActiveChunks) {
@@ -461,7 +507,7 @@ static void updateBlockLight(const Chunk::BlockIter& iter, std::deque<Chunk::Blo
         }
         if(newOutdoorLight + 1 < block->outdoorLight()) {
           Block& b = *block;
-          uint xx = block->outdoorLight() - 1;
+          uint8_t xx = b.outdoorLight() - 1;
           newOutdoorLight = xx;
         }
       }
@@ -476,14 +522,14 @@ static void updateBlockLight(const Chunk::BlockIter& iter, std::deque<Chunk::Blo
     iter->setOutdoorLight(newOutdoorLight);
     iter.chunk->setDirty();
     for(auto block: neighbors) {
-      if(!block->dirty() && !block->opaque() && block.valid()) {
-        block->setDirty();
+      if(!block->lightDirty() && !block->opaque() && block.valid()) {
+        block->setLightDirty();
         pending.push_back(block);
       }
     }
   }
 
-  iter->clearDirty();
+  iter->clearLightDirty();
   
 }
 

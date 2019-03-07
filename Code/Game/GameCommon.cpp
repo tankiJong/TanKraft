@@ -17,3 +17,7 @@ const mat44 gGameCoordsTransform = {
     1,  0, 0, 0,
     0,  0, 0, 1,
   };
+
+
+
+Clock* gGameClock = nullptr;
