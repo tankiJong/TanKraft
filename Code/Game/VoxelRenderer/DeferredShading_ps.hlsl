@@ -58,20 +58,24 @@ bool isect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(float) t0, _inout
 	return true;
 }
 
-#define earth_radius gPlanetRadius	 /*meter*/
-#define atmosphere_radius (gPlanetRadius + gPlanetAtmosphereThickness) /*meter*/
+// #define earth_radius gPlanetRadius	 /*meter*/
+// #define atmosphere_radius (gPlanetRadius + gPlanetAtmosphereThickness) /*meter*/
 
+#define earth_radius 6360e3 // (m)
+#define atmosphere_radius 6420e3 // (m)
 // scattering coefficients at sea level (m)
 #define betaR gRayleigh /* Rayleigh */
 #define betaM gMie /*Mie	*/
+// #define betaR float3(5.5e-6, 13.0e-6, 22.4e-6) /* Rayleigh */
+// #define betaM 21e-6f.xxx /*Mie	*/
 
 // scale height (m)
 // thickness of the atmosphere if its density were uniform
-// #define hR 7994.0
-// #define hM 1200.0
+#define hR 7994.0
+#define hM 1200.0
 
-#define hR gScatterThickness.x
-#define hM gScatterThickness.y
+// #define hR gScatterThickness.x
+// #define hM gScatterThickness.y
 float rayleigh_phase_func(float mu)
 {
 	return
@@ -88,7 +92,7 @@ float rayleigh_phase_func(float mu)
 float henyey_greenstein_phase_func(float mu)
 {
 	return
-						(1.f - g*g)
+						(1.f - g*g)	*(1.+mu*mu)*3.f/(8.f*PI)
 	/ //---------------------------------------------
 		((4.f + PI) * pow(1. + g*g - 2.*g*mu, 1.5));
 }
@@ -116,17 +120,16 @@ sphere_t atmosphere() {
 	return s;
 };
 
-#define num_samples 16
-#define num_samples_light 16
+#define num_samples 8
+#define num_samples_light 8
 
-bool get_sun_light(
+float get_sun_light(
 	_in(ray_t) ray,
 	_inout(float) optical_depthR,
 	_inout(float) optical_depthM
 ){
 	float t0 = 0, t1 = 0;
 	isect_sphere(ray, atmosphere(), t0, t1);
-
 	float march_pos = 0.;
 	float march_step = t1 / float(num_samples_light);
 
@@ -137,7 +140,7 @@ bool get_sun_light(
 			ray.direction * (march_pos + 0.5 * march_step);
 		float height = distance(s, earth.origin) - earth_radius;
 		if (height < 0.)
-			return false;
+			return 0;
 
 		optical_depthR += exp(-height / hR) * march_step;
 		optical_depthM += exp(-height / hM) * march_step;
@@ -145,7 +148,7 @@ bool get_sun_light(
 		march_pos += march_step;
 	}
 
-	return true;
+	return 1.f;
 }
 
 
@@ -182,6 +185,7 @@ float3 get_incident_light(_in(ray_t) ray, float end)
 	float march_pos = 0.;
 
 	sphere_t earth = atmosphere();
+
 	for (int i = 0; i < num_samples; i++) {
 		float3 s =
 			ray.origin +
@@ -200,20 +204,20 @@ float3 get_incident_light(_in(ray_t) ray, float end)
 
 		float optical_depth_lightR = 0.;
 		float optical_depth_lightM = 0.;
-		bool overground = get_sun_light(
+		float overground = get_sun_light(
 			light_ray,
 			optical_depth_lightR,
 			optical_depth_lightM);
 
-		if (overground) {
+		// if (overground) {
 			float3 tau =
 				betaR * (optical_depthR + optical_depth_lightR) +
 				betaM * 1.1 * (optical_depthM + optical_depth_lightM);
 			float3 attenuation = exp(-tau);
-			sumR += hr * attenuation;
-			sumM += hm * attenuation;
+			sumR += overground * hr * attenuation;
+			sumM += overground * hm * attenuation;
 
-		}
+		// }
 		march_pos += march_step;
 	}
 
@@ -240,32 +244,43 @@ float3 get_incident_light(_in(ray_t) ray)
 }
 
 
-float3 jodieReinhardTonemap(float3 c){
-    float l = dot(c, float3(0.2126, 0.7152, 0.0722));
-    float3 tc = c / (c + 1.0);
-
-    return lerp(c / (l + 1.0), tc, tc);
+float3 jodieReinhardTonemap(float3 x){
+    const float a = 2.51;
+    const float b = 0.03;
+    const float c = 2.43;
+    const float d = 0.59;
+    const float e = 0.14;
+    return clamp((x * (a * x + b)) / (x * (c * x + d ) + e), 0.0, 1.0);
 }
 	// https://www.shadertoy.com/view/XtBXDz
 float3 SkyColor(float height, float3 direction, float end) {
 
-	height = earth_radius + (height - gPlanetRadius) / 256 * (atmosphere_radius - earth_radius) * .1f;
+	// height = height / (gPlanetRadius + gPlanetAtmosphereThickness) * atmosphere_radius;
+	height = (height - gPlanetRadius) / 256 * (atmosphere_radius - earth_radius) + earth_radius;
 
 	ray_t ray;
 	ray.origin = float3(0, height, 0);
 	ray.direction = direction;
-
-	sphere_t s;
-	s.origin = float3(0,0,0);
-	s.radius = gPlanetRadius;
-	s.material = 0;
-
-	float t0 = 0, t1 = 0;
 	
 	// if (isect_sphere(ray, s, t0, t1) && t0 > 0) {
 	// 	return .333f.xxx;
 	// } else {
-		return (get_incident_light(ray, end));
+		return jodieReinhardTonemap(get_incident_light(ray, end));
+	// }
+}
+
+float3 SkyColor(float height, float3 direction) {
+
+	height = (height - gPlanetRadius) / 256 * (atmosphere_radius - earth_radius) + earth_radius;
+	// height = earth_radius + 100;
+	ray_t ray;
+	ray.origin = float3(0, height, 0);
+	ray.direction = direction;
+	
+	// if (isect_sphere(ray, s, t0, t1) && t0 > 0) {
+	// 	return .333f.xxx;
+	// } else {
+		return jodieReinhardTonemap(get_incident_light(ray));
 	// }
 }
 
@@ -327,13 +342,13 @@ PSOutput main(PostProcessingVSOutput input)
 		
 		float t0 = 0, t1 = 0;
 
-		ray_t ray;
-		ray.origin = camPosition.xyz;
-		ray.direction = fdirection;
-
-		isect_sphere( ray, atmosphere(), t0, t1 );
+		// ray_t ray;
+		// ray.origin = camPosition.xyz;
+		// ray.direction = fdirection;
+		// 
+		// isect_sphere( ray, atmosphere(), t0, t1 );
 		// float4 sceneScatter = float4(SkyColor(height, fdirection, distFromCam), 1.f);
-		float4 skyScatter = float4(SkyColor(height, fdirection, t1), 1.f);
+		float4 skyScatter = clamp(float4(SkyColor(gPlanetRadius, fdirection), 1.f), 0.f.xxxx, 1.f.xxxx);
 	
 
 	float3 tan = normalize(gTexTangent.Sample(gSampler, input.tex).xyz * 2.f - 1.f);
@@ -373,7 +388,8 @@ PSOutput main(PostProcessingVSOutput input)
 
 	finalColor = saturate(finalColor);
 
-
+	// output.color = 1.f.xxxx - isnan(skyScatter);
+	// return output;
 	float skyBlendFactor = (distFromCam - gViewDistance.x) / (gViewDistance.y - gViewDistance.x);
 	skyBlendFactor = clamp(skyBlendFactor, 0, 1);
 

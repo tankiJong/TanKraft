@@ -131,7 +131,7 @@ void World::onUpdate() {
       float noise = Compute1dPerlinNoise(float(gGameClock->total.second) / 86400.f, .005, 9);
       noise = rangeMap(noise, -1.f, 1.f, .8f, 1.f);
       // noise = clampf01(noise);
-      noise = 0;
+      // noise = 0;
       size_t writeIndex = mFlameNoiseSample.push(noise);
       ImGui::PlotLines("Flame Flicker", (const float*)&mFlameNoiseSample, 
                        (int)mFlameNoiseSample.capacity(), (int)writeIndex, 

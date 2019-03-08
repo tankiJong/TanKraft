@@ -10,7 +10,7 @@ PSOutput main(PSInput input)
   // output.color = float4(
 	// 	PhongLighting(input.worldPosition, input.normal, texColor.xyz, input.eyePosition), 1.f);
 	
-	float3 indoorLight = input.color.x  * float3(1.f, 0.9f, 0.8f);
+	float3 indoorLight = input.color.x * gWorldConstant.y * float3(1.f, 0.9f, 0.8f);
 
 	float timeInDay = gTime / 86400.f;
 	timeInDay = timeInDay - floor(timeInDay);

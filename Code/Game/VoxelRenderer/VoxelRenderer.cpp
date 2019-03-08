@@ -86,7 +86,7 @@ void VoxelRenderer::onLoad(RHIContext&) {
   defineRenderPasses();
 
 
-  mFrameData.gViewDistance.x = Config::kMaxActivateDistance - 20;
+  mFrameData.gViewDistance.x = Config::kMaxActivateDistance - 100;
   mFrameData.gViewDistance.y = Config::kMaxActivateDistance;
 }
 
@@ -380,7 +380,7 @@ void VoxelRenderer::updateFrameConstant(RHIContext&) {
   mFrameData.gWorldConstant.y = mWorld->currentLightFlickLevel();
   static vec3  gRayleigh{5.5f, 13.0f, 22.4f};
   static vec3 gMie{21, 21, 21};
-  static float  scaleRayleigh = 0.00001800, scaleMie = 0.0000001119;
+  static float  scaleRayleigh = 1e-6, scaleMie = 1e-6;
 
   float dayaPrecent = mFrameData.gTime / 86400.f;
 
@@ -399,7 +399,7 @@ void VoxelRenderer::updateFrameConstant(RHIContext&) {
   }
   mFrameData.gRayleigh = gRayleigh * scaleRayleigh;
   mFrameData.gMie = gMie * scaleMie;
-
+  // mFrameData.gTime = .28 * 86400.f;
   mFrameData.gSunDir = vec3(0, sinf(dayaPrecent * 2 * PI - .5f * PI), cosf(dayaPrecent * 2 * PI - .5f * PI));
   mCFrameData->updateData(mFrameData);
 
@@ -624,3 +624,4 @@ DEF_RESOURCE(Program, "Game/Shader/Voxel/SSAO_generate") {
 
   return prog;
 }
+//http://blog.tuxedolabs.com/2018/10/17/from-screen-space-to-voxel-space.html

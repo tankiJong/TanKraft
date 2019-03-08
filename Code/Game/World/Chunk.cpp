@@ -622,7 +622,7 @@ void Chunk::generateBlocks() {
   float noises[kSizeX][kSizeY];
 
   constexpr BlockIndex kWorldSeaLevel = 100;
-  constexpr int kChangeRange = (int(kSizeZ) - int(kWorldSeaLevel)) / 15;
+  constexpr int kChangeRange = (int(kSizeZ) - int(kWorldSeaLevel)) / 4;
 
   vec2 base = mCoords.pivotPosition().xy();
   for(uint i = 0; i < kSizeX; i++) {
