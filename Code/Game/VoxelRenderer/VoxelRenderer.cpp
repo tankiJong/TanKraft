@@ -26,6 +26,7 @@
 #include "Game/World/World.hpp"
 #include "Game/Utils/Config.hpp"
 #include "Game/GameCommon.hpp"
+#include "Engine/Renderer/RenderGraph/RenderNodeBuilder.hpp"
 
 // DFS TODO: add ConstBuffer class66
 
@@ -96,6 +97,11 @@ void VoxelRenderer::onRenderFrame(RHIContext& ctx) {
   updateViewConstant(ctx);
 
   cleanBuffers(ctx);
+  // mGraph.setCustomBackBuffer("color_result");
+  // or
+  // mGraph.setCustomBackBuffer(mTFinal);
+
+
   bool result = mGraph.execute();
   ENSURES(result);
   cleanupFrameData();
@@ -140,7 +146,7 @@ void VoxelRenderer::issueChunk(const Chunk* chunk) {
   if(chunk->mesh() == nullptr) return;
 
   vec3 basePosition = chunk->coords().pivotPosition();
-  mFrameRenderData.emplace_back(ChunckRenderData{chunk->mesh(), mat44::translation(basePosition)});
+  mFrameRenderData.emplace_back(ChunkRenderData{chunk->mesh(), mat44::translation(basePosition)});
 }
 
 VoxelRenderer::~VoxelRenderer() {
@@ -261,87 +267,6 @@ void VoxelRenderer::copyToBackBuffer(RHIContext& ctx) {
   ctx.copyResource(*mTFinal, *RHIDevice::get()->backBuffer());
 }
 
-// void VoxelRenderer::constructFrameMesh() {
-//
-//   constexpr float kBlockSize = 1.f; 
-//
-//   mTLights = TypedBuffer::For<light_info_t>(200, RHIResource::BindingFlag::ShaderResource);
-//   
-//   Mesher ms;
-//   ms.begin(DRAW_TRIANGES);
-//
-//   auto addBlock = [&](const vec3& center, const vec3& dimension) {
-//     float dx = dimension.x * .5f, dy = dimension.y * .5f, dz = dimension.z * .5f;
-//     vec3 bottomCenter = center - vec3{0,0,1} * dz;
-//
-//     std::array<vec3, 8> vertices = {
-//       bottomCenter + vec3{ -dx, -dy,  2*dz },
-//       bottomCenter + vec3{ dx,  -dy,  2*dz },
-//       bottomCenter + vec3{ dx,  dy, 2*dz },
-//       bottomCenter + vec3{ -dx, dy,  2*dz },
-//
-//       bottomCenter + vec3{ -dx, -dz, 0 },
-//       bottomCenter + vec3{ dx,  -dz, 0 },
-//       bottomCenter + vec3{ dx,   dz, 0 },
-//       bottomCenter + vec3{ -dx,  dz, 0 }
-//     };
-//
-//     ms.quad(vertices[0], vertices[1], vertices[2], vertices[3], 
-//         {0,.875}, {.125, .875}, {.125, 1}, {0, 1});
-//     ms.quad(vertices[4], vertices[7], vertices[6], vertices[5],
-//         {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
-//     ms.quad(vertices[4], vertices[5], vertices[1], vertices[0],
-//         {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
-//     ms.quad(vertices[5], vertices[6], vertices[2], vertices[1],
-//         {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
-//     ms.quad(vertices[6], vertices[7], vertices[3], vertices[2],
-//         {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
-//     ms.quad(vertices[7], vertices[4], vertices[0], vertices[3],
-//         {.25, .25}, {.25, .375}, {.375, .375}, {.37, .25});
-//   };
-//
-//   for(int j = 0; j < 100; ++j) {
-//     for(int i = 0; i < 100; ++i) {
-//       int kmax = abs(Compute2dPerlinNoise(i, j, 50, 3)) * 5.f + 1;
-//       for(int k = 0; k < kmax; k++) {
-//         vec2 centerPosition { i * kBlockSize, j * kBlockSize };
-//         // ms.cube({centerPosition, k * kBlockSize}, vec3::one);
-//         addBlock(
-//           vec3{ centerPosition.x, centerPosition.y, k * kBlockSize }, 
-//           vec3{ kBlockSize });
-//       }
-//     }
-//   }
-//
-//   ms.end();
-//   mFrameMesh = ms.createMesh();
-//
-//   uint kk = 0;
-//   for(int j = 0; j < 20; ++j) {
-//     for(int i = 0; i < 20; ++i) {
-//       if(i % 2 != 0 || j % 2 != 0) continue;
-//       vec2 centerPosition { i * 1.f, j * 1.f };
-//
-//       light_info_t light;
-//
-//       vec3 lightPosition = {centerPosition.x, getRandomf01() * 5.f + 5.f, centerPosition.y};
-//       Rgba lightColor = { vec3{0, getRandomf01(), getRandomf01()} };
-//       light.asPointLight(
-//         lightPosition,
-//         100.f, vec3{0,0,1}, 
-//         lightColor);
-//       mTLights->set(kk++, light);
-//
-//       // mat44 view = mCamera->view();
-//       // mat44 proj = mCamera->projection();
-//       // mat44 trans = mat44::makeTranslation(lightPosition);
-//       // ImGuizmo::DrawCube((float*)&view, (float*)&proj, (float*)&trans);
-//     }
-//   }
-//   mTLights->uploadGpu();
-//
-// }
-
 void VoxelRenderer::constructTestSphere() {
   static Transform lightTransform;
   static vec3 lightColor = vec3::one;
@@ -414,32 +339,233 @@ void VoxelRenderer::updateViewConstant(RHIContext& ctx) {
 }
 
 void VoxelRenderer::defineRenderPasses() {
-  auto& genBufferPass = mGraph.defineNode("G-Buffer",[&](RenderNodeContext& builder) {
-     
-    S<const Program> prog = Resource<Program>::get("Game/Shader/Voxel/GenGBuffer");
-    builder.reset(prog);
+  // auto& genBufferPass = mGraph.defineNode("G-Buffer",[&](RenderNodeContext& builder) {
+  //    
+  //   S<const Program> prog = Resource<Program>::get("Game/Shader/Voxel/GenGBuffer");
+  //   builder.reset(prog);
+  //
+  //   builder.readCbv("frame-data", mCFrameData, 0);
+  //   builder.readCbv("camera-mat", mCCamera, 1);
+  //   builder.readCbv("model-mat", mCModel, 2);
+  //
+  //   auto albedo = Resource<Texture2>::get("/Data/Images/Terrain_32x32.png");
+  //
+  //   builder.readSrv("albedo-tex", *albedo->srv(0, 6), 0);
+  //
+  //   builder.writeRtv("g-albedo", mGAlbedo, 0);
+  //   builder.writeRtv("g-normal", mGNormal, 1);
+  //   builder.writeRtv("g-tangent", mGTangent, 2);
+  //   builder.writeRtv("g-bitangent", mGBiTangent, 3);
+  //   builder.writeRtv("g-position", mGPosition, 4);
+  //
+  //   builder.writeDsv("g-depth", mGDepth);
+  //
+  //   return [&](RHIContext& ctx) {
+  //     for(auto& renderData: mFrameRenderData) {
+  //       mCModel->updateData(mat44::identity);
+  //       // foreach( auto mesh: mScene.meshes() ) 
+  //       renderData.mesh->bindForContext(ctx);
+  //       for(const draw_instr_t& instr: renderData.mesh->instructions()) {
+  //         ctx.setPrimitiveTopology(instr.prim);
+  //         if(instr.useIndices) {
+  //           ctx.drawIndexed(0, instr.startIndex, instr.elementCount);
+  //         } else {
+  //           ctx.draw(instr.startIndex, instr.elementCount);
+  //         }
+  //       }
+  //     }
+  //   };
+  // });
+  //
+  // auto& ssaoPass = mGraph.defineNode("ssao-generate", [&](RenderNodeContext& builder) {
+  //
+  //   S<const Program> prog = Resource<Program>::get("Game/Shader/Voxel/SSAO_generate");
+  //   builder.reset(prog, true);
+  //   
+  //   builder.readCbv("frame-data", mCFrameData, 0);
+  //   builder.readCbv("camera-mat", mCCamera, 1);
+  //   builder.readCbv("model-mat", mCModel, 2);
+  //
+  //   // builder.readSrv("g-albedo", mGAlbedo, 0);
+  //   builder.readSrv("g-normal", mGNormal, 1);
+  //   builder.readSrv("g-tangent", mGTangent, 2);
+  //   builder.readSrv("g-bitangent", mGBiTangent, 3);
+  //   builder.readSrv("g-position", mGPosition, 4);
+  //   builder.readSrv("g-depth", mGDepth, 5);
+  //
+  //   builder.readWriteUav("g-texAO", mTexAO, 0);
+  //
+  //   return [&](RHIContext& ctx) {
+  //     if(Input::Get().isKeyDown('N')) return;
+  //     auto size = Window::Get()->bounds().size();
+  //
+  //     uint width = (uint)size.x;
+  //     uint height = (uint)size.y;
+  //     ctx.dispatch( width / 16 + 1, height / 16 + 1, 1);
+  //   };
+  // });
+  //
+  // auto& ssaoBlurPassV = mGraph.createNode<BlurPass>("ssao-blur-v", mTexAO, true);
+  // auto& ssaoBlurPassH = mGraph.createNode<BlurPass>("ssao-blur-h", mTexAO, false);
+  //
+  // auto& deferredShadingPass = mGraph.defineNode("DeferredShading", [&](RenderNodeContext& builder) {
+  //
+  //   S<const Program> prog = Resource<Program>::get("Game/Shader/Voxel/DeferredShading");
+  //   builder.reset(prog);
+  //   
+  //   builder.readCbv("frame-data", mCFrameData, 0);
+  //   builder.readCbv("camera-mat", mCCamera, 1);
+  //   builder.readCbv("model-mat", mCModel, 2);
+  //   builder.writeRtv("final-image", mTFinal, 0);
+  //
+  //   auto skybox = Resource<TextureCube>::get("/Data/Images/skybox_texture.cube.jpg");
+  //
+  //   builder.readSrv("g-albedo", mGAlbedo, 0);
+  //   builder.readSrv("g-normal", mGNormal, 1);
+  //   builder.readSrv("g-tangent", mGTangent, 2);
+  //   builder.readSrv("g-bitangent", mGBiTangent, 3);
+  //   builder.readSrv("g-position", mGPosition, 4);
+  //   builder.readSrv("g-texAO", mTexAO, 5);
+  //   builder.readSrv("g-depth", mGDepth, 6);
+  //   builder.readSrv("g-lights", mTLights, 7);
+  //   builder.readSrv("tex-sky", skybox, 8);
+  //
+  //   return [&](RHIContext& ctx) {
+  //     ctx.draw(0, 3);
+  //     ctx.copyResource(*mGDepth, *RHIDevice::get()->depthBuffer());
+  //   };
+  // });
+  //
+  // auto& debugLightPass = mGraph.defineNode("Debug:Light", [&](RenderNodeContext& builder) {
+  //   auto prog = Resource<Program>::get("internal/Shader/debug/always");
+  //   builder.reset(prog);
+  //
+  //   RHIBuffer::sptr_t tintBuffer = RHIBuffer::create(sizeof(vec4), RHIResource::BindingFlag::ConstantBuffer, RHIBuffer::CPUAccess::Write, &vec4::one);
+  //
+  //   builder.readCbv("camera-mat", mCCamera, 1);
+  //   builder.readCbv("tint-buffer", tintBuffer, 6);
+  //
+  //   builder.writeRtv("final-image", mTFinal, 0);
+  //
+  //   return [&](RHIContext& ctx) {
+  //     Mesh* mesh = mWorld->aquireDebugLightDirtyMesh();
+  //     if(!mesh) return;
+  //     mesh->bindForContext(ctx);
+  //     for(const draw_instr_t& instr: mesh->instructions()) {
+  //       ctx.setPrimitiveTopology(instr.prim);
+  //       if(instr.useIndices) {
+  //         ctx.drawIndexed(0, instr.startIndex, instr.elementCount);
+  //       } else {
+  //         ctx.draw(instr.startIndex, instr.elementCount);
+  //       }
+  //     }
+  //
+  //     SAFE_DELETE(mesh);
+  //   };
+  // });
+  // // this is not optional, consider case like: a->pass1->a, a->pass2->a, a->pass2->a, you cannot figure out the sequence.
+  // // mGraph.depend(genBufferPass, ssaoPass);
+  // // mGraph.depend(genBufferPass, deferredShadingPass);
+  // mGraph.depend(ssaoBlurPassV, ssaoBlurPassH);
+  // mGraph.depend(ssaoBlurPassH, deferredShadingPass);
+  // mGraph.depend(deferredShadingPass, debugLightPass);
+  //
+  // // another way to go with is specify dependencies among resources, which gives the freedom to name res differently among nodes.
+  // mGraph.connect(genBufferPass, "g-albedo", deferredShadingPass, "g-albedo");
+  // mGraph.connect(genBufferPass, "g-normal", deferredShadingPass, "g-normal");
+  // mGraph.connect(genBufferPass, "g-tangent", deferredShadingPass, "g-tangent");
+  // mGraph.connect(genBufferPass, "g-bitangent", deferredShadingPass, "g-bitangent");
+  // mGraph.connect(genBufferPass, "g-position", deferredShadingPass, "g-position");
+  // mGraph.connect(genBufferPass, "g-depth", deferredShadingPass, "g-depth");
+  //
+  // mGraph.connect(genBufferPass, "g-normal", ssaoPass, "g-normal");
+  // mGraph.connect(genBufferPass, "g-tangent", ssaoPass, "g-tangent");
+  // mGraph.connect(genBufferPass, "g-bitangent", ssaoPass, "g-bitangent");
+  // mGraph.connect(genBufferPass, "g-position", ssaoPass, "g-position");
+  // mGraph.connect(genBufferPass, "g-depth", ssaoPass, "g-depth");
+  //
+  // mGraph.connect(ssaoPass, "g-texAO", ssaoBlurPassV, "blur-input");
+  //
+  // /* I will want something like: genBufferPass["g-albedo"] >> deferredShadingPass["g-albedo"]
+  // / or: mGraph | "passA.gAlbedo" >> "passB.color"
+  //              | "passA.gNormal" >> "passB.worldNormal"
+  // */
+  //
+  // // mGraph.setOutput(ssaoPass, "g-texAO");
+  // // mGraph.setOutput(ssaoBlurPassH, "blur-output");
+  // // mGraph.setOutput(deferredShadingPass, "final-image");
+  // mGraph.setOutput(debugLightPass, "final-image");
 
-    builder.readCbv("frame-data", mCFrameData, 0);
-    builder.readCbv("camera-mat", mCCamera, 1);
-    builder.readCbv("model-mat", mCModel, 2);
+  // mGraph.declare<TextureCube>("skybox");
+  mGraph.declare<Texture2>("ao_buffer");
+  mGraph.declare<const Texture2>("albedo");
 
-    auto albedo = Resource<Texture2>::get("/Data/Images/Terrain_32x32.png");
+  mGraph.declare<RHIBuffer>("frameConstant");
+  mGraph.declare<RHIBuffer>("cameraInfo");   
+  mGraph.declare<RHIBuffer>("modelMatrix");
 
-    builder.readSrv("albedo-tex", *albedo->srv(0, 6), 0);
+  mGraph.declare<std::vector<ChunkRenderData>>("RenderData");
 
-    builder.writeRtv("g-albedo", mGAlbedo, 0);
-    builder.writeRtv("g-normal", mGNormal, 1);
-    builder.writeRtv("g-tangent", mGTangent, 2);
-    builder.writeRtv("g-bitangent", mGBiTangent, 3);
-    builder.writeRtv("g-position", mGPosition, 4);
+  auto& genBufferPass = mGraph.defineNode("G-Buffer", [](RenderNodeBuilder& builder, RenderNodeContext& context) {
 
-    builder.writeDsv("g-depth", mGDepth);
+      RenderGraphResourceDesc desc;
+      desc.type = RHIResource::Type::Texture2D;
+      desc.texture2.size = uvec2{Window::Get()->bounds().size()};
+      desc.bindingFlags = RHIResource::BindingFlag::RenderTarget | RHIResource::BindingFlag::ShaderResource;
 
-    return [&](RHIContext& ctx) {
-      for(auto& renderData: mFrameRenderData) {
-        mCModel->updateData(mat44::identity);
-        // foreach( auto mesh: mScene.meshes() ) 
+      desc.texture2.format = TEXTURE_FORMAT_RGBA8;
+      builder.output<Texture2>("out_albedo"   , desc);
+
+      desc.texture2.format = TEXTURE_FORMAT_RGBA16;
+      builder.output<Texture2>("out_normal"   , desc);
+      builder.output<Texture2>("out_tangent"  , desc);
+      builder.output<Texture2>("out_bitangent", desc);
+      builder.output<Texture2>("out_position" , desc);
+
+      desc.texture2.format = TEXTURE_FORMAT_D24S8;
+      desc.bindingFlags = RHIResource::BindingFlag::DepthStencil | RHIResource::BindingFlag::ShaderResource;
+      builder.output<Texture2>("out_depth"    , desc);
+
+    {
+      S<const Program> prog = Resource<Program>::get("Game/Shader/Voxel/GenGBuffer");
+      context.reset(prog);
+
+      context.readCbv("frameConstant", 0);
+      context.readCbv("cameraInfo",    1);
+      context.readCbv("modelMatrix",   2);
+
+      context.readSrv("albedo",        0);
+
+      context.writeRtv(".out_albedo",    0);
+      context.writeRtv(".out_normal",    1);
+      context.writeRtv(".out_tangent",   2);
+      context.writeRtv(".out_bitangent", 3);
+      context.writeRtv(".out_position",  4);
+
+      context.writeDsv(".out_depth");
+    }
+
+    return [=](const RenderGraphResourceSet& set, RHIContext& ctx) {
+      const std::vector<ChunkRenderData>*    frameRenderData =
+          set.get<std::vector<ChunkRenderData>>("RenderData");
+      // set.get<std::vector<ChunkRenderData>>("RenderData");
+
+      Texture2::sptr_t albedo    = set.get<Texture2>("G-Buffer.out_albedo");
+      Texture2::sptr_t normal    = set.get<Texture2>("G-Buffer.out_normal");
+      Texture2::sptr_t tangent   = set.get<Texture2>("G-Buffer.out_tangent");
+      Texture2::sptr_t bitangent = set.get<Texture2>("G-Buffer.out_bitangent");
+      Texture2::sptr_t depth     = set.get<Texture2>("G-Buffer.out_depth");
+
+      ctx.clearRenderTarget(*albedo->rtv(), Rgba::black);
+      ctx.clearRenderTarget(*tangent->rtv(), Rgba::gray);
+      ctx.clearRenderTarget(*bitangent->rtv(), Rgba::gray);
+      ctx.clearRenderTarget(*normal->rtv(), Rgba::gray);
+      ctx.clearDepthStencilTarget(*depth->dsv());
+
+      for(auto& renderData: *frameRenderData) {
+
         renderData.mesh->bindForContext(ctx);
+
         for(const draw_instr_t& instr: renderData.mesh->instructions()) {
           ctx.setPrimitiveTopology(instr.prim);
           if(instr.useIndices) {
@@ -448,29 +574,43 @@ void VoxelRenderer::defineRenderPasses() {
             ctx.draw(instr.startIndex, instr.elementCount);
           }
         }
+
       }
     };
   });
-  
-  auto& ssaoPass = mGraph.defineNode("ssao-generate", [&](RenderNodeContext& builder) {
 
-    S<const Program> prog = Resource<Program>::get("Game/Shader/Voxel/SSAO_generate");
-    builder.reset(prog, true);
+  auto& ssaoPass = mGraph.defineNode("ssao-generate", 
+    [](RenderNodeBuilder& builder, RenderNodeContext& context) {
     
-    builder.readCbv("frame-data", mCFrameData, 0);
-    builder.readCbv("camera-mat", mCCamera, 1);
-    builder.readCbv("model-mat", mCModel, 2);
+    builder.input<Texture2> ("normal"   );
+    builder.input<Texture2> ("tangent"  );
+    builder.input<Texture2> ("bitangent");
+    builder.input<Texture2> ("position" );
+    builder.input<Texture2> ("depth"    );
 
-    // builder.readSrv("g-albedo", mGAlbedo, 0);
-    builder.readSrv("g-normal", mGNormal, 1);
-    builder.readSrv("g-tangent", mGTangent, 2);
-    builder.readSrv("g-bitangent", mGBiTangent, 3);
-    builder.readSrv("g-position", mGPosition, 4);
-    builder.readSrv("g-depth", mGDepth, 5);
+    RenderGraphResourceDesc desc;
+    desc.type = RHIResource::Type::Texture2D;
+    desc.texture2.format = TEXTURE_FORMAT_RGBA8;
+    builder.output<Texture2>("out_ao", desc);
 
-    builder.readWriteUav("g-texAO", mTexAO, 0);
+    {
+      S<const Program> prog = Resource<Program>::get("Game/Shader/Voxel/SSAO_generate");
+      context.reset(prog, true);
+      
+      context.readCbv("frameConstant", 0);
+      context.readCbv("cameraInfo",    1);
 
-    return [&](RHIContext& ctx) {
+      // builder.readSrv("g-albedo", mGAlbedo, 0);
+      context.readSrv(".normal",    1);
+      context.readSrv(".tangent",   2);
+      context.readSrv(".bitangent", 3);
+      context.readSrv(".position",  4);
+      context.readSrv(".depth",     5);
+
+      context.readWriteUav(".out_ao", 0);
+    }
+
+    return [&](const RenderGraphResourceSet&, RHIContext& ctx) {
       if(Input::Get().isKeyDown('N')) return;
       auto size = Window::Get()->bounds().size();
 
@@ -478,100 +618,148 @@ void VoxelRenderer::defineRenderPasses() {
       uint height = (uint)size.y;
       ctx.dispatch( width / 16 + 1, height / 16 + 1, 1);
     };
+
   });
 
-  auto& ssaoBlurPassV = mGraph.createNode<BlurPass>("ssao-blur-v", mTexAO, true);
-  auto& ssaoBlurPassH = mGraph.createNode<BlurPass>("ssao-blur-h", mTexAO, false);
+  auto& blurpass = mGraph.defineNode("Blur", 
+	  // notice, pure function, should not have any dependency from outer code,
+    // only describe the pass node.
+  [](RenderNodeBuilder& builder, RenderNodeContext& context) {  
 
-  auto& deferredShadingPass = mGraph.defineNode("DeferredShading", [&](RenderNodeContext& builder) {
+	  auto& target = builder.inputOutput<Texture2>("target");
 
-    S<const Program> prog = Resource<Program>::get("Game/Shader/Voxel/DeferredShading");
-    builder.reset(prog);
-    
-    builder.readCbv("frame-data", mCFrameData, 0);
-    builder.readCbv("camera-mat", mCCamera, 1);
-    builder.readCbv("model-mat", mCModel, 2);
-    builder.writeRtv("final-image", mTFinal, 0);
+	  // --------------------
+    // this part could be skipped with more infrastructure in the shader program system
+		  S<const Program> prog = Resource<Program>::get("internal/ShaderPass/Blur");
+		  context.reset(prog, true);
 
-    auto skybox = Resource<TextureCube>::get("/Data/Images/skybox_texture.cube.jpg");
+		  // get from transient resource system
+		  // get from certain pass output
+		  context.readSrv(".target", 0, 0);
 
-    builder.readSrv("g-albedo", mGAlbedo, 0);
-    builder.readSrv("g-normal", mGNormal, 1);
-    builder.readSrv("g-tangent", mGTangent, 2);
-    builder.readSrv("g-bitangent", mGBiTangent, 3);
-    builder.readSrv("g-position", mGPosition, 4);
-    builder.readSrv("g-texAO", mTexAO, 5);
-    builder.readSrv("g-depth", mGDepth, 6);
-    builder.readSrv("g-lights", mTLights, 7);
-    builder.readSrv("tex-sky", skybox, 8);
+		  // I am asking a temporary resource to render
+      RenderGraphResourceDesc desc;
+      desc.texture2.format = TEXTURE_FORMAT_RGBA8;
+		  auto& tex = context.extend(target, "temp_buffer", desc);
+		  
+		  context.writeRtv(tex, 0);
+	  // ---------------------
 
-    return [&](RHIContext& ctx) {
+
+	  return [&](const RenderGraphResourceSet& set, RHIContext& ctx) {
+		  ctx.draw(0, 3);
+
+		  Texture2::sptr_t from = set.get<Texture2>(tex);
+
+		  // specify current node, then get something from this node by name
+		  Texture2::sptr_t to   = set.get<Texture2>("Blur.result"); 
+
+		  ctx.copyResource(*from, *to);
+	  };
+  });
+
+  auto& ssaoBlurPassV = mGraph.createNode<BlurPass>("ssao-blur-v", true);
+  auto& ssaoBlurPassH = mGraph.createNode<BlurPass>("ssao-blur-h", false);
+
+  auto& deferredShadingPass = mGraph.defineNode("DeferredShading",
+  [](RenderNodeBuilder& builder, RenderNodeContext& context) {
+
+    builder.input<Texture2>("gAlbedo"   );
+    builder.input<Texture2>("gNormal"   );
+    builder.input<Texture2>("gTangent"  );
+    builder.input<Texture2>("gBitangent");
+    builder.input<Texture2>("gPosition" );
+    builder.input<Texture2>("gAO"       );
+    builder.input<Texture2>("gDepth"    );
+    // builder.input("skybox"        RHIResource::Type::TextureCube);
+    // builder.input<RHIBuffer>("lightBuffer");
+
+    RenderGraphResourceDesc desc;
+    desc.type = RHIResource::Type::Texture2D;
+    desc.texture2.size = uvec2{Window::Get()->bounds().size()};
+    desc.bindingFlags = RHIResource::BindingFlag::RenderTarget;
+    desc.texture2.format = TEXTURE_FORMAT_RGBA8;
+
+    builder.output<Texture2>("out_finalImage", desc);
+    {
+      S<const Program> prog = Resource<Program>::get("Game/Shader/Voxel/DeferredShading");
+      context.reset(prog);
+      
+      context.readCbv("frameConstant"    , 0);
+      context.readCbv("cameraInfo"       , 1);
+
+      context.readSrv(".gAlbedo"          , 0);
+      context.readSrv(".gNormal"         , 1);
+      context.readSrv(".gTangent"        , 2);
+      context.readSrv(".gBitangent"       , 3);
+      context.readSrv(".gPosition"        , 4);
+      context.readSrv(".gAO"              , 5);
+      context.readSrv(".gDepth"           , 6);
+      // context.readSrv(".lightBuffer"       , 7);
+      // context.readSrv("skybox"            , 8);
+
+      context.writeRtv(".out_finalImage" , 0);
+    }
+
+
+    return [=](const RenderGraphResourceSet& set, RHIContext& ctx) {
       ctx.draw(0, 3);
-      ctx.copyResource(*mGDepth, *RHIDevice::get()->depthBuffer());
+
+      const Texture2::sptr_t depth = set.get<Texture2>("DeferredShading.gDepth");
+      ctx.copyResource(*depth, *RHIDevice::get()->depthBuffer());
+
+      Texture2::sptr_t backBuffer = set.backBuffer();
+		  Texture2::sptr_t from = set.get<Texture2>("DeferredShading.out_finalImage");
+		  ctx.copyResource(*from, *backBuffer);
     };
   });
 
-  auto& debugLightPass = mGraph.defineNode("Debug:Light", [&](RenderNodeContext& builder) {
-    auto prog = Resource<Program>::get("internal/Shader/debug/always");
-    builder.reset(prog);
+  auto& presentPass = mGraph.defineNode("Present", 
+  [](RenderNodeBuilder& builder, RenderNodeContext& context) {
 
-    RHIBuffer::sptr_t tintBuffer = RHIBuffer::create(sizeof(vec4), RHIResource::BindingFlag::ConstantBuffer, RHIBuffer::CPUAccess::Write, &vec4::one);
+	  builder.input<Texture2>("source");
 
-    builder.readCbv("camera-mat", mCCamera, 1);
-    builder.readCbv("tint-buffer", tintBuffer, 6);
-
-    builder.writeRtv("final-image", mTFinal, 0);
-
-    return [&](RHIContext& ctx) {
-      Mesh* mesh = mWorld->aquireDebugLightDirtyMesh();
-      if(!mesh) return;
-      mesh->bindForContext(ctx);
-      for(const draw_instr_t& instr: mesh->instructions()) {
-        ctx.setPrimitiveTopology(instr.prim);
-        if(instr.useIndices) {
-          ctx.drawIndexed(0, instr.startIndex, instr.elementCount);
-        } else {
-          ctx.draw(instr.startIndex, instr.elementCount);
-        }
-      }
-
-      SAFE_DELETE(mesh);
-    };
+	  return [=](const RenderGraphResourceSet& set, RHIContext& ctx) {
+		  Texture2::sptr_t backBuffer = set.backBuffer();
+		  Texture2::sptr_t from = set.get<Texture2>("Present.source");
+		  ctx.copyResource(*from, *backBuffer);
+	  };
   });
-  // this is not optional, consider case like: a->pass1->a, a->pass2->a, a->pass2->a, you cannot figure out the sequence.
-  // mGraph.depend(genBufferPass, ssaoPass);
-  // mGraph.depend(genBufferPass, deferredShadingPass);
-  mGraph.depend(ssaoBlurPassV, ssaoBlurPassH);
-  mGraph.depend(ssaoBlurPassH, deferredShadingPass);
-  mGraph.depend(deferredShadingPass, debugLightPass);
+
+  mGraph.connect(genBufferPass, "out_normal",   ssaoPass, "normal");
+  mGraph.connect(genBufferPass, "out_tangent",  ssaoPass, "tangent");
+  mGraph.connect(genBufferPass, "out_bitangent",ssaoPass, "bitangent");
+  mGraph.connect(genBufferPass, "out_position", ssaoPass, "position");
+  mGraph.connect(genBufferPass, "out_depth",    ssaoPass, "depth");
+
+  mGraph.connect(ssaoPass,      "out_ao",       ssaoBlurPassV, "target");
+  mGraph.connect(ssaoBlurPassV, "target",   ssaoBlurPassH, "target");
+
+  mGraph.connect(genBufferPass, "out_albedo",   deferredShadingPass, "gAlbedo");
+  mGraph.connect(genBufferPass, "out_normal",   deferredShadingPass, "gNormal");
+  mGraph.connect(genBufferPass, "out_tangent",  deferredShadingPass, "gTangent");
+  mGraph.connect(genBufferPass, "out_bitangent",deferredShadingPass, "gBitangent");
+  mGraph.connect(genBufferPass, "out_position", deferredShadingPass, "gPosition");
+  mGraph.connect(genBufferPass, "out_depth",    deferredShadingPass, "gDepth");
+  mGraph.connect(ssaoBlurPassH, "target",   deferredShadingPass, "gAO");
+  // mGraph.connect(genBufferPass, "out_depth",    deferredShadingPass, "lightBuffer");
   
-  // another way to go with is specify dependencies among resources, which gives the freedom to name res differently among nodes.
-  mGraph.connect(genBufferPass, "g-albedo", deferredShadingPass, "g-albedo");
-  mGraph.connect(genBufferPass, "g-normal", deferredShadingPass, "g-normal");
-  mGraph.connect(genBufferPass, "g-tangent", deferredShadingPass, "g-tangent");
-  mGraph.connect(genBufferPass, "g-bitangent", deferredShadingPass, "g-bitangent");
-  mGraph.connect(genBufferPass, "g-position", deferredShadingPass, "g-position");
-  mGraph.connect(genBufferPass, "g-depth", deferredShadingPass, "g-depth");
+  mGraph.bind("ssao-generate.out_ao", "ao_buffer");
+  
+  mGraph.build();
 
-  mGraph.connect(genBufferPass, "g-normal", ssaoPass, "g-normal");
-  mGraph.connect(genBufferPass, "g-tangent", ssaoPass, "g-tangent");
-  mGraph.connect(genBufferPass, "g-bitangent", ssaoPass, "g-bitangent");
-  mGraph.connect(genBufferPass, "g-position", ssaoPass, "g-position");
-  mGraph.connect(genBufferPass, "g-depth", ssaoPass, "g-depth");
+  mGraph.setOutputPass(deferredShadingPass);
+  // mGraph.setParam(mTFinal, "color_result");
 
-  mGraph.connect(ssaoPass, "g-texAO", ssaoBlurPassV, "blur-input");
+  mGraph.setParam<Texture2>(mTexAO, "ao_buffer");
 
-  /* I will want something like: genBufferPass["g-albedo"] >> deferredShadingPass["g-albedo"]
-  / or: mGraph | "passA.gAlbedo" >> "passB.color"
-               | "passA.gNormal" >> "passB.worldNormal"
-  */
+  auto albedo = Resource<Texture2>::get("/Data/Images/Terrain_32x32.png");
+  mGraph.setParam<const Texture2>(albedo, "albedo");
 
-  // mGraph.setOutput(ssaoPass, "g-texAO");
-  // mGraph.setOutput(ssaoBlurPassH, "blur-output");
-  // mGraph.setOutput(deferredShadingPass, "final-image");
-  mGraph.setOutput(debugLightPass, "final-image");
-
-  mGraph.compile();
+  mGraph.setParam<RHIBuffer>(mCFrameData, "frameConstant");
+  mGraph.setParam<RHIBuffer>(mCCamera, "cameraInfo");   
+  mGraph.setParam<RHIBuffer>(mCModel, "modelMatrix");
+  mGraph.setParam<std::vector<ChunkRenderData>>(&mFrameRenderData, "RenderData");
 
 }
 

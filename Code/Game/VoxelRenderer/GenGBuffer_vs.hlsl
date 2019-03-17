@@ -17,7 +17,8 @@ PSInput main(
 	camPosition /= camPosition.w;
 	
 	
-	float4 worldPosition = mul(model, float4(position, 1.f));
+	// float4 worldPosition = mul(model, float4(position, 1.f));
+	float4 worldPosition = float4(position, 1.f);
 	float3 relatvieToCameraPosition = worldPosition.xyz - camPosition.xyz;
 
 	float3 planetCenterV = float3(0, 0, -camPosition.z - gPlanetRadius);

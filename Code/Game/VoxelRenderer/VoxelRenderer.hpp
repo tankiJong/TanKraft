@@ -10,7 +10,7 @@ class RenderScene;
 class Camera;
 
 
-struct ChunckRenderData {
+struct ChunkRenderData {
   Mesh* mesh = nullptr;
   mat44 model;
 };
@@ -65,23 +65,23 @@ protected:
 
   void cleanupFrameData();
   // const buffers
-  RHIBuffer::sptr_t mCFrameData;
-  RHIBuffer::sptr_t mCCamera;
-  RHIBuffer::sptr_t mCModel;
-
+  RHIBuffer::sptr_t   mCFrameData;
+  RHIBuffer::sptr_t   mCCamera;
+  RHIBuffer::sptr_t   mCModel;
+  
   // G-buffers
-  Texture2::sptr_t mGAlbedo;
-  Texture2::sptr_t mGDepth;
-  Texture2::sptr_t mGPosition;
-  Texture2::sptr_t mGNormal;
-  Texture2::sptr_t mGTangent;
-  Texture2::sptr_t mGBiTangent;
-
-  Texture2::sptr_t mTexAO;
+  Texture2::sptr_t    mGAlbedo;
+  Texture2::sptr_t    mGDepth;
+  Texture2::sptr_t    mGPosition;
+  Texture2::sptr_t    mGNormal;
+  Texture2::sptr_t    mGTangent;
+  Texture2::sptr_t    mGBiTangent;
+  
+  Texture2::sptr_t    mTexAO;
   // resource
   TypedBuffer::sptr_t mTLights;
-
-  Texture2::sptr_t mTFinal;
+  
+  Texture2::sptr_t    mTFinal;
 
   frame_data_t mFrameData {0, 0 };
   Mesh* mFrameMesh = nullptr;
@@ -89,5 +89,5 @@ protected:
   const World* mWorld = nullptr;
   RenderGraph mGraph;
 
-  std::vector<ChunckRenderData> mFrameRenderData;
+  std::vector<ChunkRenderData> mFrameRenderData;
 };

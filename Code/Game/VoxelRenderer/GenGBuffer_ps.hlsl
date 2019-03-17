@@ -20,7 +20,7 @@ PSOutput main(PSInput input)
 	float3 ambientLight = ambientStrength * float3(.8f, .9f, 1.f);
 	ambientLight *= ambientStrength;
 
-
+	// ambientLight = 1.f.xxx;
 
 	output.color = texColor * float4(max(indoorLight, ambientLight), 1.f);
 	output.normal = float4(input.normal * .5f + .5f, 1.f);
@@ -31,5 +31,6 @@ PSOutput main(PSInput input)
 	output.bitangent = float4(bitangent * .5f + .5f, 1.f);
 	output.position = float4(input.worldPosition, 1.f);
 
+	// output.color = float4(1, 0,0,1);
 	return output;
 }
