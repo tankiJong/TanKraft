@@ -13,6 +13,7 @@ class Camera;
 struct ChunkRenderData {
   Mesh* mesh = nullptr;
   mat44 model;
+  const Chunk* chunk;
 };
 
 class VoxelRenderer: public Renderer {
@@ -32,6 +33,8 @@ public:
   void setWorld(const World* world) {
     mWorld = world;
   }
+
+  void raytracing(const Chunk* chunk);
   ~VoxelRenderer();
 protected:
 

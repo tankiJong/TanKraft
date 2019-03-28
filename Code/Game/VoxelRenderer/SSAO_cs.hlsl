@@ -22,7 +22,7 @@ static const float SSAO_DEPTH_RADIUS = 1.f;
 #define SSAO_SAMPLE_COUNT 32
 
 [RootSignature(SSAO_RootSig)]
-[numthreads(16, 16, 1)]
+[numthreads(8, 8, 1)]
 void main( uint3 pixCoords : SV_DispatchThreadID ) {
 	
 	uint2 dim;

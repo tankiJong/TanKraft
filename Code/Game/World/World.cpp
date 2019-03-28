@@ -40,7 +40,8 @@ void World::onInit() {
 }
 
 void World::onInput() {
-
+  Debug::drawText("hello text", 4, vec3::zero, 0);
+  Debug::drawText2("hello text2d", 16, vec2::zero, 0);
   mCameraController.onInput();
 
   {

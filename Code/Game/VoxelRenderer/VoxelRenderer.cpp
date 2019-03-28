@@ -146,7 +146,11 @@ void VoxelRenderer::issueChunk(const Chunk* chunk) {
   if(chunk->mesh() == nullptr) return;
 
   vec3 basePosition = chunk->coords().pivotPosition();
-  mFrameRenderData.emplace_back(ChunkRenderData{chunk->mesh(), mat44::translation(basePosition)});
+  mFrameRenderData.emplace_back(ChunkRenderData{chunk->mesh(), mat44::translation(basePosition), chunk});
+}
+
+void VoxelRenderer::raytracing(const Chunk* chunk) {
+  
 }
 
 VoxelRenderer::~VoxelRenderer() {
@@ -616,14 +620,12 @@ void VoxelRenderer::defineRenderPasses() {
 
       uint width = (uint)size.x;
       uint height = (uint)size.y;
-      ctx.dispatch( width / 16 + 1, height / 16 + 1, 1);
+      ctx.dispatch( width / 8 + 1, height / 8 + 1, 1);
     };
 
   });
 
   auto& blurpass = mGraph.defineNode("Blur", 
-	  // notice, pure function, should not have any dependency from outer code,
-    // only describe the pass node.
   [](RenderNodeBuilder& builder, RenderNodeContext& context) {  
 
 	  auto& target = builder.inputOutput<Texture2>("target");
@@ -712,18 +714,6 @@ void VoxelRenderer::defineRenderPasses() {
 		  Texture2::sptr_t from = set.get<Texture2>("DeferredShading.out_finalImage");
 		  ctx.copyResource(*from, *backBuffer);
     };
-  });
-
-  auto& presentPass = mGraph.defineNode("Present", 
-  [](RenderNodeBuilder& builder, RenderNodeContext& context) {
-
-	  builder.input<Texture2>("source");
-
-	  return [=](const RenderGraphResourceSet& set, RHIContext& ctx) {
-		  Texture2::sptr_t backBuffer = set.backBuffer();
-		  Texture2::sptr_t from = set.get<Texture2>("Present.source");
-		  ctx.copyResource(*from, *backBuffer);
-	  };
   });
 
   mGraph.connect(genBufferPass, "out_normal",   ssaoPass, "normal");

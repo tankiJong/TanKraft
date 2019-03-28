@@ -6,6 +6,7 @@
 #include "Engine/Math/Primitives/ivec2.hpp"
 #include "Engine/Graphics/Model/Mesher.hpp"
 #include "Engine/Math/Primitives/aabb3.hpp"
+#include "Engine/Graphics/RHI/Texture.hpp"
 
 class Chunk;
 class Mesh;
@@ -212,15 +213,21 @@ protected:
   void generateBlocks();
   void initLights();
   bool neighborsLoaded() const;
+
+  void rebuildGpuMetaData();
+
   std::array<Block, kTotalBlockCount> mBlocks; // 0xffff
   ChunkCoords mCoords;
   std::array<Chunk*, NUM_NEIGHBOR> mNeighbors 
     { &sInvalidChunk, &sInvalidChunk, &sInvalidChunk, &sInvalidChunk, };
-  owner<Mesh*> mMesh = nullptr;
   Mesher mMesher;
   World* mOwner = nullptr;
   aabb3 mBounds;
   
+  owner<Mesh*> mMesh = nullptr;
+  Texture3::sptr_t mChunkGPUData = nullptr;
+  Texture3::sptr_t mChunkShadowVolume = nullptr;
+
   bool mSavePending = false;
   bool mIsDirty = true;
 

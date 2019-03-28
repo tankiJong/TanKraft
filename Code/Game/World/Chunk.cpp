@@ -789,6 +789,10 @@ bool Chunk::neighborsLoaded() const {
   });
 }
 
+void Chunk::rebuildGpuMetaData() {
+  mChunkGPUData = Texture3::create(kSizeX, kSizeY, kSizeZ, TEXTURE_FORMAT_RGBA8, RHIResource::BindingFlag::UnorderedAccess, mBlocks.data());
+}
+
 bool Chunk::reconstructMesh() {
   EXPECTS(mIsDirty);
 
@@ -830,6 +834,8 @@ bool Chunk::reconstructMesh() {
   mMesher.end();
 
   mMesh = mMesher.createMesh<vertex_lit_t>();
+
+  rebuildGpuMetaData();
 
   mIsDirty = false;
 

@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Engine/Core/common.hpp"
 #include "Engine/Math/Primitives/aabb2.hpp"
+#include "Engine/Graphics/RHI/TypedBuffer.hpp"
 
 class uvec2;
 class aabb2;
@@ -42,6 +43,8 @@ public:
 
   static uvec2 spriteIndexToCoords(uint index);
   Block instantiate() const;
+  static void init();
+  static RHIBuffer::sptr_t sBlockDefBuffer;
 protected:
   static std::array<BlockDef, kTotalBlockDef> sBlockDefs;
   block_id_t mTypeId = 255;

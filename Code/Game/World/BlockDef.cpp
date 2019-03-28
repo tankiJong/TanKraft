@@ -3,6 +3,7 @@
 #include "Engine/Math/Primitives/aabb2.hpp"
 #include "Game/World/Block.hpp"
 #include "Engine/Debug/ErrorWarningAssert.hpp"
+#include "Engine/Renderer/Shader/ShaderInterop.h"
 
 #define CI(x,y) spriteCoordsToIndex(x,y)
 
@@ -15,6 +16,10 @@ std::array<BlockDef, BlockDef::kTotalBlockDef> BlockDef::sBlockDefs = {
 };
 
 #undef CI
+
+RHIBuffer::sptr_t BlockDef::sBlockDefBuffer = nullptr;
+
+
 
 BlockDef::BlockDef() {
   for(uint face = 0; face < NUM_FACE; face++) {
@@ -62,4 +67,31 @@ Block BlockDef::instantiate() const {
   block.mBitFlags = mOpaque ? 0x1 : 0x0;
 
   return block;
+}
+
+struct BlockDefGPU {
+  uint id;
+  float emission;
+  float opaque;
+  float2 ___padding0;
+  aabb2 uvs[4];
+};
+
+void BlockDef::init() {
+  std::array<BlockDefGPU, kTotalBlockDef> defs;
+  memset(defs.data(), 0, sizeof(defs));
+
+  for(uint i = 0; i < kTotalBlockDef; ++i) {
+    BlockDefGPU& gdef = defs[i];
+    BlockDef& def = sBlockDefs[i];
+
+    gdef.id = def.id();
+    gdef.emission = (float)def.emissive() / (float)(UINT8_MAX - 1) * 100;
+    gdef.opaque = def.opaque() ? 1 : 0;
+    memcpy(gdef.uvs, def.mSpriteUVs.data(), sizeof(gdef.uvs));
+  }
+
+  sBlockDefBuffer = RHIBuffer::create(sizeof(defs), RHIResource::BindingFlag::ShaderResource, RHIBuffer::CPUAccess::None, defs.data());
+
+  NAME_RHIRES(sBlockDefBuffer);
 }

@@ -110,6 +110,8 @@ void GameApplication::onInit() {
   sceneRenderer->setWorld(mWorld);
   Input::Get().mouseLockCursor(true);
   // Input::Get().mouseHideCursor(false);
+
+  BlockDef::init();
 }
 
 void GameApplication::onInput() {

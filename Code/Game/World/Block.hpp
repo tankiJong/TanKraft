@@ -39,4 +39,5 @@ protected:
   block_id_t mType = 0;
   uint8_t mLight = 0;
   uint8_t mBitFlags = kOpaqueFlag;
+  uint8_t ___padding;
 };
