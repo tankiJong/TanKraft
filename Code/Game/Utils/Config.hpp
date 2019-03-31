@@ -8,4 +8,5 @@ struct Config {
   static uint kMaxChunkDeactivatePerFrame;
   static uint kMaxChunkReconstructMeshPerFrame;
   static float kWorldTimeScale;
+  static float kGravity;
 };

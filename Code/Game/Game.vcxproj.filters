@@ -19,9 +19,6 @@
     <ClCompile Include="Main.cpp">
       <Filter>General</Filter>
     </ClCompile>
-    <ClCompile Include="CameraController.cpp">
-      <Filter>General</Filter>
-    </ClCompile>
     <ClCompile Include="VoxelRenderer\VoxelRenderer.cpp">
       <Filter>General</Filter>
     </ClCompile>
@@ -43,15 +40,27 @@
     <ClCompile Include="Utils\FileCache.cpp">
       <Filter>General</Filter>
     </ClCompile>
+    <ClCompile Include="Gameplay\Entity.cpp">
+      <Filter>General</Filter>
+    </ClCompile>
+    <ClCompile Include="Gameplay\Player.cpp">
+      <Filter>General</Filter>
+    </ClCompile>
+    <ClCompile Include="Game.cpp">
+      <Filter>General</Filter>
+    </ClCompile>
+    <ClCompile Include="Gameplay\FollowCamera.cpp">
+      <Filter>General</Filter>
+    </ClCompile>
+    <ClCompile Include="Gameplay\Collision.cpp">
+      <Filter>General</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameCommon.hpp">
       <Filter>General</Filter>
     </ClInclude>
     <ClInclude Include="EngineBuildPreferences.hpp" />
-    <ClInclude Include="CameraController.hpp">
-      <Filter>General</Filter>
-    </ClInclude>
     <ClInclude Include="VoxelRenderer\VoxelRenderer.hpp" />
     <ClInclude Include="World\Block.hpp" />
     <ClInclude Include="World\BlockDef.hpp" />
@@ -59,12 +68,20 @@
     <ClInclude Include="World\World.hpp" />
     <ClInclude Include="Utils\Config.hpp" />
     <ClInclude Include="Utils\FileCache.hpp" />
+    <ClInclude Include="Gameplay\Entity.hpp" />
+    <ClInclude Include="Gameplay\Player.hpp" />
+    <ClInclude Include="Game.hpp" />
+    <ClInclude Include="Gameplay\FollowCamera.hpp">
+      <Filter>General</Filter>
+    </ClInclude>
+    <ClInclude Include="Gameplay\Collision.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="VoxelRenderer\Common.hlsli" />
     <None Include="VoxelRenderer\GenGBuffer.hlsli" />
     <None Include="VoxelRenderer\DeferredShading.hlsli" />
     <None Include="..\..\ReadMe.md" />
+    <None Include="VoxelRenderer\Rt_Util.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="VoxelRenderer\GenGBuffer_ps.hlsl" />
@@ -72,5 +89,6 @@
     <FxCompile Include="VoxelRenderer\DeferredShading_ps.hlsl" />
     <FxCompile Include="VoxelRenderer\DeferredShading_vs.hlsl" />
     <FxCompile Include="VoxelRenderer\SSAO_cs.hlsl" />
+    <FxCompile Include="VoxelRenderer\Rt_voxelRayTracer_cs.hlsl" />
   </ItemGroup>
 </Project>

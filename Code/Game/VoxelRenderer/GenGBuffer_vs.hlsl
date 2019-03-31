@@ -40,7 +40,7 @@ PSInput main(
 
 	float3 world = newRelativeToCamera + camPosition.xyz;
 	
-	result.worldPosition = world;
+	result.worldPosition = position;
   result.position = mul(mul(projection, view), float4(result.worldPosition, 1.f));
   result.color = color;
   result.uv = uv;

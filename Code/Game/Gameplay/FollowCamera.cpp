@@ -1,4 +1,4 @@
-﻿#include "CameraController.hpp"
+﻿#include "FollowCamera.hpp"
 #include "Engine/Input/Input.hpp"
 #include "Engine/Graphics/Camera.hpp"
 #include "Engine/Math/MathUtils.hpp"
@@ -9,42 +9,51 @@
 #include "Engine/Debug/Log.hpp"
 #include "Engine/Core/Time/Clock.hpp"
 #include "Game/World/Chunk.hpp"
+#include "Game/Gameplay/Entity.hpp"
+#include "Game/GameCommon.hpp"
+#include "Game/Utils/Config.hpp"
 
 static const vec3 MAX_ACCELERATION{ 1.f };
 
 static const vec2 MAX_ANGULAR_ACCELERATION{ 180.f };
 
-void CameraController::onInput() {
-
-  {
-    if(Input::Get().isKeyDown('W')) {
-      addForce({ mCamera.transform().right().xy().normalized(), 0 });
-    }
-    if(Input::Get().isKeyDown('S')) {
-      addForce({ -mCamera.transform().right().xy().normalized(), 0 });
-    }
+FollowCamera::FollowCamera(Entity* target, eCameraMode mode)
+  : mTarget(target)
+  , mCameraMode(mode) {
+  if(mTarget != nullptr) {
+    mCamera.transform().parent() = &mTarget->transform();
   }
 
-  {
-    if (Input::Get().isKeyDown('D')) {
-      addForce({ -mCamera.transform().up().xy().normalized(), 0 });
-    }
-    if (Input::Get().isKeyDown('A')) {
-      addForce({ mCamera.transform().up().xy().normalized(), 0 });
-    }
+  mCamera.setCoordinateTransform(gGameCoordsTransform);
+  mCamera.transform().setRotationOrder(ROTATION_YZX);
+  mCamera.setProjectionPrespective(70, 3.f*CLIENT_ASPECT, 3.f, 0.100000f, Config::kMaxActivateDistance);
+}
+
+void FollowCamera::possessTarget(Entity* target) {
+  if(mTarget != nullptr) {
+    mTarget->possessed = false;
+    mTarget->mCamera = nullptr;
+  }
+  mTarget = target;
+
+  if(target == nullptr) {
+    vec3 position = mCamera.transform().position();
+    Euler rotation = mCamera.transform().rotation();
+    mCamera.transform().parent() = nullptr;
+    mCamera.transform().localRotation() = rotation;
+    mCamera.transform().localPosition() = position;
+  } else {
+    mCamera.transform().parent() = &mTarget->transform();
+    mTarget->possessed = true;
+    mTarget->mCamera = &mCamera;
   }
 
-  {
-    if (Input::Get().isKeyDown('E')) {
-      addForce({ 0,0, 1 });
-    }
-    if (Input::Get().isKeyDown('Q')) {
-      addForce({ 0,0, -1 });
-    }
-  }
+}
+
+void FollowCamera1Person::onInput() {
 
   if(Input::Get().isKeyJustDown(KEYBOARD_SPACE)) {
-    mCamera.transform().localPosition() = vec3{-3, 0,0};
+    mCamera.transform().localPosition() = vec3::zero;
     mCamera.transform().localRotation() = vec3::zero;
   }
 
@@ -65,7 +74,7 @@ void CameraController::onInput() {
 
 }
 
-void CameraController::onUpdate(float dt) {
+void FollowCamera1Person::onUpdate(float dt) {
   
   // shifting
   {
@@ -110,21 +119,31 @@ void CameraController::onUpdate(float dt) {
   mAngularForce = vec3::zero;
 }
 
-void CameraController::speedScale(float scale) {
+void FollowCamera1Person::speedScale(float scale) {
   mSpeedScale = scale;
 }
 
-void CameraController::addForce(const vec3& force) {
+void FollowCamera1Person::addForce(const vec3& force) {
 
   // assume the mass of the camera is 1
   mForce += force;
 
 }
 
-void CameraController::addAngularForce(const vec2& force) {
+void FollowCamera1Person::addAngularForce(const vec2& force) {
   mAngularForce += force;
 }
 
-vec3 CameraController::speed() const {
+vec3 FollowCamera1Person::speed() const {
   return mMoveSpeed * mSpeedScale;
+}
+
+void FollowCameraOverSholder::onUpdate(float dt) {
+  vec3 position;
+
+  position.x = mDistanceFromTarget * cosDegrees(mRotateAroundY) * cosDegrees(mRotateAroundZ);
+  position.y = mDistanceFromTarget * cosDegrees(mRotateAroundY) * sinDegrees(mRotateAroundZ);
+  position.z = mDistanceFromTarget * sinDegrees(mRotateAroundY);
+
+  mCamera.lookAt(position, vec3::zero, vec3::forward);
 }

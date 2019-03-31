@@ -20,19 +20,7 @@ void World::onInit() {
 
   if(sChunkActivationVisitingPattern.empty()) reconstructChunkVisitingPattern();
 
-  mCamera.setCoordinateTransform(gGameCoordsTransform);
-  // mCamera.transfrom().setCoordinateTransform(gGameCoordsTransform);
-  mCamera.transform().setRotationOrder(ROTATION_YZX);
-  mCamera.transform().localPosition() = vec3{-10,1,120};
-  mCamera.transform().localRotation() = vec3{0,0,0};
 
-  // TODO: look at is buggy
-  // mCamera.lookAt({ -3, -3, 3 }, { 0, 0, 0 }, {0, 0, 1});
-  mCamera.setProjectionPrespective(70, 3.f*CLIENT_ASPECT, 3.f, 0.100000f, Config::kMaxActivateDistance);
- 
-  mCameraController.speedScale(10);
-
-  Debug::setCamera(&mCamera);
   Debug::setDepth(Debug::DEBUG_DEPTH_DISABLE);
   Debug::drawBasis(Transform());
 
@@ -42,58 +30,11 @@ void World::onInit() {
 void World::onInput() {
   Debug::drawText("hello text", 4, vec3::zero, 0);
   Debug::drawText2("hello text2d", 16, vec2::zero, 0);
-  mCameraController.onInput();
-
-  {
-    mCameraController.speedScale((Input::Get().isKeyDown(KEYBOARD_SHIFT) ? 100.f : 10.f));
-
-    float scale = mCameraController.speedScale();
-    vec3 camPosition = mCamera.transform().position();
-    vec3 camRotation = mCamera.transform().localRotation();
-    ImGui::Begin("Control");
-    ImGui::Checkbox("Enable raycast", &mEnableRaycast);
-    ImGui::SliderFloat("Camera speed", &scale, 1, 500, "%0.f", 10);
-    ImGui::SliderFloat3("Camera Position", (float*)&camPosition, 0, 10);
-    ImGui::SliderFloat3("Camera Rotation", (float*)&mCamera.transform().localRotation(), -360, 360);
-    ImGui::End();
-    mCameraController.speedScale(scale);
-  }
-
-  if(Input::Get().isKeyJustDown('R')) {
-    mEnableRaycast = !mEnableRaycast;
-  }
 
   if(Input::Get().isKeyDown('T')) {
     gGameClock->scale(10000);
   } else {
     gGameClock->scale(200);
-  }
-
-
-  if(Input::Get().isKeyJustDown(MOUSE_LBUTTON)) {
-    if(mPlayerRaycast.impacted()) {
-      BlockDef* air = BlockDef::get(0);
-      mPlayerRaycast.contact.block.reset(*air);
-      mPlayerRaycast.contact.block.dirtyLight();
-      mPlayerRaycast.contact.block.chunk->markSavePending();
-    }
-  }
-
-  if(Input::Get().isKeyJustDown(MOUSE_RBUTTON)) {
-    if(mPlayerRaycast.impacted() && mPlayerRaycast.contact.distance > 0) {
-
-      BlockDef* light = nullptr;
-
-      if(Input::Get().isKeyDown(KEYBOARD_CONTROL)) {
-        light = BlockDef::get("light");
-      } else {
-        light = BlockDef::get("stone");
-      }
-      auto iter = mPlayerRaycast.contact.block.next(mPlayerRaycast.contact.normal);
-      iter.reset(*light);
-      iter.dirtyLight();
-      iter.chunk->markSavePending();
-    }
   }
 
   if(Input::Get().isKeyJustDown('U')) {
@@ -112,9 +53,9 @@ void World::onInput() {
   }
 }
 
-void World::onUpdate() {
+void World::onUpdate(const vec3& viewPosition) {
   float dt = (float)GetMainClock().frame.second;
-
+  mCurrentViewPosition = viewPosition;
   {
     ImGui::Begin("Environment Noises");
     {
@@ -143,7 +84,6 @@ void World::onUpdate() {
   }
 
 
-  mCameraController.onUpdate(dt);
 
   updateChunks();
   manageChunks();
@@ -161,87 +101,9 @@ void World::onUpdate() {
       propagateLight(false);
   }
 
-
-  if(mEnableRaycast) {
-    mPlayerRaycast = raycast(mCamera.transform().position(), 
-                              mCamera.transform().right().normalized(), 8);
-  } else {
-    Debug::setDepth(Debug::eDebugDrawDepthMode::DEBUG_DEPTH_DISABLE);
-    if(mPlayerRaycast.impacted()) {
-      Debug::drawLine(mPlayerRaycast.start, mPlayerRaycast.end,
-                      1, 0, Rgba::gray, Rgba(50, 50, 50));
-      Debug::drawPoint(mPlayerRaycast.contact.position, 0.2f, 0, Rgba(128, 0, 0));
-      Debug::setDepth(Debug::eDebugDrawDepthMode::DEBUG_DEPTH_ENABLE);
-      Debug::drawLine(mPlayerRaycast.start, mPlayerRaycast.contact.position,
-                      1, 0, Rgba::red, Rgba::white);
-      Debug::drawPoint(mPlayerRaycast.contact.position, 0.2f, 0, Rgba::red);
-    } else {
-      Debug::drawLine(mPlayerRaycast.start, mPlayerRaycast.end,
-                      1, 0, Rgba::green, Rgba::green);
-    }
-
-    Debug::setDepth(Debug::eDebugDrawDepthMode::DEBUG_DEPTH_ENABLE);
-  }
-
-  // Debug::drawPoint(mCamera.transfrom().position() + mCamera.transfrom().right(), .03f, 0);
-  Debug::drawBasis(mCamera.transform().position() + mCamera.transform().right(),
-                   vec3::right * .05f, vec3::up * .05f, vec3::forward * .05f, 0);
-  if(mPlayerRaycast.impacted()) {
-    Debug::setDepth(Debug::eDebugDrawDepthMode::DEBUG_DEPTH_ENABLE);
-
-    aabb3 innerbounds = mPlayerRaycast.contact.block.bounds();
-    innerbounds = { innerbounds.mins - vec3{.03f}, innerbounds.maxs + vec3{.03f}};
-    Debug::drawCube(innerbounds, mat44::identity, true, 0, Rgba::white);
-
-    {
-     
-      /*
-       *     2 ----- 1
-       *    /|      /|
-       *   3 ----- 0 |
-       *   | 6 ----|-5
-       *   |/      |/             x  
-       *   7 ----- 4         y___/
-       */  
-      vec3 v[8] = {
-        vec3{ innerbounds.mins.x, innerbounds.mins.y, innerbounds.maxs.z },
-        vec3{ innerbounds.maxs.x, innerbounds.mins.y, innerbounds.maxs.z },
-        vec3{ innerbounds.maxs.x, innerbounds.maxs.y, innerbounds.maxs.z },
-        vec3{ innerbounds.mins.x, innerbounds.maxs.y, innerbounds.maxs.z },
-
-        vec3{ innerbounds.mins.x, innerbounds.mins.y, innerbounds.mins.z },
-        vec3{ innerbounds.maxs.x, innerbounds.mins.y, innerbounds.mins.z },
-        vec3{ innerbounds.maxs.x, innerbounds.maxs.y, innerbounds.mins.z },
-        vec3{ innerbounds.mins.x, innerbounds.maxs.y, innerbounds.mins.z },
-      };
-
-      Rgba tintColor(50, 20, 20);
-      if(mPlayerRaycast.contact.normal.x == 1) {
-        Debug::drawQuad(v[5], v[6], v[2], v[1], 0, tintColor);
-      }
-      if(mPlayerRaycast.contact.normal.x == -1) {
-        Debug::drawQuad(v[7], v[4], v[0], v[3], 0, tintColor);
-      }
-      if(mPlayerRaycast.contact.normal.y == 1) {
-        Debug::drawQuad(v[6], v[7], v[3], v[2], 0, tintColor);
-      }
-      if(mPlayerRaycast.contact.normal.y == -1) {
-        Debug::drawQuad(v[5], v[4], v[0], v[1], 0, tintColor);
-      }
-      if(mPlayerRaycast.contact.normal.z == 1) {
-        Debug::drawQuad(v[3], v[0], v[1], v[2], 0, tintColor);
-      }
-      if(mPlayerRaycast.contact.normal.z == -1) {
-        Debug::drawQuad(v[6], v[5], v[4], v[7], 0, tintColor);
-      }
-    }
-    Debug::setDepth(Debug::eDebugDrawDepthMode::DEBUG_DEPTH_DISABLE);
-
-  }
 }
 
 void World::onRender(VoxelRenderer& renderer) const {
-  renderer.setCamera(mCamera);
   for(auto& [coords, chunk]: mActiveChunks) {
     if(chunk->invalid()) continue;
     renderer.issueChunk(chunk);
@@ -314,23 +176,22 @@ owner<Chunk*> World::unregisterChunkFromWorld(const ChunkCoords& coords) {
   return chunk;
 }
 
-Chunk* World::findChunk(const ChunkCoords& coords) {
-  const auto iter = mActiveChunks.find(coords);
-  return iter == mActiveChunks.end() ? Chunk::invalidIter().chunk() : iter->second;
+// Chunk* World::findChunk(const ChunkCoords& coords) {
+// }
+
+Chunk* World::findChunk(const ChunkCoords& coords) const {
+   const auto iter = mActiveChunks.find(coords);
+   return iter == mActiveChunks.end() ? Chunk::invalidIter().chunk() : iter->second;
 }
 
-const Chunk* World::findChunk(const ChunkCoords& coords) const {
-  return const_cast<World*>(this)->findChunk(coords);
-}
-
-Chunk* World::findChunk(const vec3& worldPosition) {
+Chunk* World::findChunk(const vec3& worldPosition) const {
 
   ChunkCoords coords = ChunkCoords::fromWorld(worldPosition);
   return findChunk(coords);
 
 }
 
-World::raycast_result_t World::raycast(const vec3& start, const vec3& dir, float maxDist) {
+raycast_result_t World::raycast(const vec3& start, const vec3& dir, float maxDist) const {
   constexpr float kRaycastStepSize = 0.01f;
   raycast_result_t result;
 
@@ -418,6 +279,538 @@ void World::onEndFrame() {
   }
 }
 
+bool World::collide(CollisionSphere& target) const {
+  EXPECTS(target.radius <= .5f);
+
+  vec3 targetCenter = target.center();
+  vec3 originalCenter = targetCenter;
+  Chunk* chunk = findChunk(targetCenter);
+  EXPECTS(chunk != nullptr);
+
+  Chunk::BlockIter center = chunk->blockIter(targetCenter);
+  vec3 centerPosition = center.centerPosition();
+  EXPECTS(center.valid());
+
+  Chunk::BlockIter 
+    iterpx = center, iternx = center, 
+    iterpy = center, iterny = center, 
+    iterpz = center, iternz = center;
+
+  bool collided = false;
+
+  // x
+  {
+    bool collideFirst = false;
+    {
+      auto iter = center.nextPosX();
+      iterpx = iter;
+      if(iter->opaque()) {
+        vec3 position = centerPosition + vec3{1, 0, 0};
+        float ds = position.x - targetCenter.x;
+        if(ds < .5f + target.radius) {
+          targetCenter.x = position.x - .5f - target.radius;
+          collided = true;
+          collideFirst = true;
+        }
+      }
+    } if(!collideFirst) {
+      auto iter = center.nextNegX();
+      iternx = iter;
+      if(iter->opaque()) {
+        vec3 position = centerPosition + vec3{-1, 0, 0};
+        float ds = targetCenter.x - position.x;
+        if(ds < .5f + target.radius) {
+          targetCenter.x = position.x + .5f + target.radius;
+          collided = true;
+        }
+      }
+    }
+  }
+
+  // y
+  {
+    bool collideFirst = false;
+    {
+      auto iter = center.nextPosY();
+      iterpy = iter;
+      if(iter->opaque()) {
+        vec3 position = centerPosition + vec3{0, 1, 0};
+        float ds = position.y - targetCenter.y;
+        if(ds < .5f + target.radius) {
+          targetCenter.y = position.y - .5f - target.radius;
+          collided = true;
+          collideFirst = true;
+        }
+      }
+    } if(!collideFirst) {
+      auto iter = center.nextNegY();
+      iterny = iter;
+      if(iter->opaque()) {
+        vec3 position = centerPosition + vec3{0, -1, 0};
+        float ds = targetCenter.y - position.y;
+        if(ds < .5f + target.radius) {
+          targetCenter.y = position.y + .5f + target.radius;
+          collided = true;
+        }
+      }
+    }
+  }
+
+  // z
+  {
+    bool collideFirst = false;
+    {
+      auto iter = center.nextPosZ();
+      iterpz = iter;
+      if(iter->opaque()) {
+        vec3 position = centerPosition + vec3{0, 0, 1};
+        float ds = position.z - targetCenter.z;
+        if(ds < .5f + target.radius) {
+          targetCenter.z = position.z - .5f - target.radius;
+          collided = true;
+          collideFirst = true;
+        }
+      }
+    } if(!collideFirst) {
+      auto iter = center.nextNegZ();
+      iternz = iter;
+      if(iter->opaque()) {
+        vec3 position = centerPosition + vec3{0, 0, -1};
+        float ds = targetCenter.z - position.z;
+        if(ds < .5f + target.radius) {
+          targetCenter.z = position.z + .5f + target.radius;
+          collided = true;
+        }
+      }
+    }
+  }
+  // ---------- early out 1 ----------
+  if(collided) {
+    target.target->localTranslate(targetCenter - originalCenter);
+    return collided;
+  }
+
+  Chunk::BlockIter
+    // const x
+    iterpypz = center, iterpynz = center,
+    iternypz = center, iternynz = center,
+    // const y
+    iterpxpz = center, iterpxnz = center,
+    iternxpz = center, iternxnz = center,
+    // const z
+    iternxpy = center, iternxny = center,
+    iterpxpy = center, iterpxny = center;
+
+
+  /*
+   *   1 - 2
+   *   |   |
+   *   4 - 3
+   */
+  
+  // yz - const x
+  {
+    iterpypz = iterpy.nextPosZ();
+    iternypz = iterny.nextPosZ();
+    iternynz = iterny.nextNegZ();
+    iterpynz = iterpy.nextNegZ();
+
+    vec2 centeryz = centerPosition.yz();
+
+    // 1, 3
+    if(iterpypz->opaque()){
+      vec2 delta = vec2{.5f, .5f};
+      vec2 corner1 = centeryz + delta;
+      float distance1 = targetCenter.yz().distance(corner1);
+      if(distance1 < target.radius) {
+        float ds = target.radius - distance1;
+        vec2 direction = (centeryz - corner1).normalized();
+        direction = direction * ds;
+        targetCenter += vec3{0, direction.x, direction.y};
+        collided = true;
+      } else if(iternynz->opaque()) {
+        // not collided, check the other side
+        vec2 corner2 = centeryz - delta;
+        float distance2 = targetCenter.yz().distance(corner2);
+        if(distance2 < target.radius) {
+          float ds = target.radius - distance2;
+          vec2 direction = (centeryz - corner2).normalized();
+          direction = direction * ds;
+          targetCenter += vec3{0, direction.x, direction.y};
+          collided = true;
+        }
+      }
+    }
+
+    // 2, 4
+    if(iternypz->opaque()){
+      vec2 delta = vec2{.5f, -.5f};
+      vec2 corner1 = centeryz + delta;
+      float distance1 = targetCenter.yz().distance(corner1);
+      if(distance1 < target.radius) {
+        float ds = target.radius - distance1;
+        vec2 direction = (centeryz - corner1).normalized();
+        direction = direction * ds;
+        targetCenter += vec3{0, direction.x, direction.y};
+        collided = true;
+      } else if(iterpynz->opaque()) {
+        // not collided, check the other side
+        vec2 corner2 = centeryz - delta;
+        float distance2 = targetCenter.yz().distance(corner2);
+        if(distance2 < target.radius) {
+          float ds = target.radius - distance2;
+          vec2 direction = (centeryz - corner2).normalized();
+          direction = direction * ds;
+          targetCenter += vec3{0, direction.x, direction.y};
+          collided = true;
+        }
+      }
+    }
+  }
+  // xz - const y
+  {
+    iternxpz = iternx.nextPosZ();
+    iterpxpz = iterpx.nextPosZ();
+    iterpxnz = iterpx.nextNegZ();
+    iternxnz = iternx.nextNegZ();
+    
+    vec2 centerxz = centerPosition.xz();
+
+    // 1, 3
+    if(iternxpz->opaque()){
+      vec2 delta = vec2{.5f, .5f};
+      vec2 corner1 = centerxz + delta;
+      float distance1 = targetCenter.xz().distance(corner1);
+      if(distance1 < target.radius) {
+        float ds = target.radius - distance1;
+        vec2 direction = (centerxz - corner1).normalized();
+        direction = direction * ds;
+        targetCenter += vec3{direction.x, 0, direction.y};
+        collided = true;
+      } else if(iterpxnz->opaque()) {
+        // not collided, check the other side
+        vec2 corner2 = centerxz - delta;
+        float distance2 = targetCenter.xz().distance(corner2);
+        if(distance2 < target.radius) {
+          float ds = target.radius - distance2;
+          vec2 direction = (centerxz - corner2).normalized();
+          direction = direction * ds;
+          targetCenter += vec3{direction.x, 0, direction.y};
+          collided = true;
+        }
+      }
+    }
+
+    // 2, 4
+    if(iterpxpz->opaque()){
+      vec2 delta = vec2{.5f, -.5f};
+      vec2 corner1 = centerxz + delta;
+      float distance1 = targetCenter.xz().distance(corner1);
+      if(distance1 < target.radius) {
+        float ds = target.radius - distance1;
+        vec2 direction = (centerxz - corner1).normalized();
+        direction = direction * ds;
+        targetCenter += vec3{direction.x, 0, direction.y};;
+        collided = true;
+      } else if(iternxnz->opaque()) {
+        // not collided, check the other side
+        vec2 corner2 = centerxz - delta;
+        float distance2 = targetCenter.xz().distance(corner2);
+        if(distance2 < target.radius) {
+          float ds = target.radius - distance2;
+          vec2 direction = (centerxz - corner2).normalized();
+          direction = direction * ds;
+          targetCenter += vec3{direction.x, 0, direction.y};;
+          collided = true;
+        }
+      }
+    }
+  }
+  // xy - const z
+  {
+    iterpxpy = iterpx.nextPosY();
+    iterpxny = iterpx.nextNegY();
+    iternxny = iternx.nextNegY();
+    iternxpy = iternx.nextPosY();
+    
+    vec2 centerxy = centerPosition.xy();
+
+    // 1, 3
+    if(iterpxpy->opaque()){
+      vec2 delta = vec2{.5f, .5f};
+      vec2 corner1 = centerxy + delta;
+      float distance1 = targetCenter.xy().distance(corner1);
+      if(distance1 < target.radius) {
+        float ds = target.radius - distance1;
+        vec2 direction = (centerxy - corner1).normalized();
+        direction = direction * ds;
+        targetCenter += vec3{direction.x, direction.y, 0};
+        collided = true;
+      } else if(iternxny->opaque()) {
+        // not collided, check the other side
+        vec2 corner2 = centerxy - delta;
+        float distance2 = targetCenter.xy().distance(corner2);
+        if(distance2 < target.radius) {
+          float ds = target.radius - distance2;
+          vec2 direction = (centerxy - corner2).normalized();
+          direction = direction * ds;
+          targetCenter += vec3{direction.x, direction.y, 0};
+          collided = true;
+        }
+      }
+    } else {
+      vec2 delta = vec2{.5f, .5f};
+      if(iternxny->opaque()) {
+        // not collided, check the other side
+        vec2 corner2 = centerxy - delta;
+        float distance2 = targetCenter.xy().distance(corner2);
+        if(distance2 < target.radius) {
+          float ds = target.radius - distance2;
+          vec2 direction = (centerxy - corner2).normalized();
+          direction = direction * ds;
+          targetCenter += vec3{direction.x, direction.y, 0};
+          collided = true;
+        }
+      }
+    }
+
+    // 2, 4
+    if(iterpxny->opaque()){
+      vec2 delta = vec2{.5f, -.5f};
+      vec2 corner1 = centerxy + delta;
+      float distance1 = targetCenter.xy().distance(corner1);
+      if(distance1 < target.radius) {
+        float ds = target.radius - distance1;
+        vec2 direction = (centerxy - corner1).normalized();
+        direction = direction * ds;
+        targetCenter += vec3{direction.x, direction.y, 0};
+        collided = true;
+      } else if(iternxpy->opaque()) {
+        // not collided, check the other side
+        vec2 corner2 = centerxy - delta;
+        float distance2 = targetCenter.xy().distance(corner2);
+        if(distance2 < target.radius) {
+          float ds = target.radius - distance2;
+          vec2 direction = (centerxy - corner2).normalized();
+          direction = direction * ds;
+          targetCenter += vec3{direction.x, direction.y, 0};
+          collided = true;
+        }
+      }
+    } else {
+      if(iternxpy->opaque()) {
+        // not collided, check the other side
+        vec2 delta = vec2{.5f, -.5f};
+        vec2 corner2 = centerxy - delta;
+        float distance2 = targetCenter.xy().distance(corner2);
+        if(distance2 < target.radius) {
+          float ds = target.radius - distance2;
+          vec2 direction = (centerxy - corner2).normalized();
+          direction = direction * ds;
+          targetCenter += vec3{direction.x, direction.y, 0};
+          collided = true;
+        }
+      }
+    }
+  }
+
+  // ---------- early out 2 ----------  
+  if(collided) {
+    target.target->localTranslate(targetCenter - originalCenter);
+    return collided;
+  }
+
+  /*
+   *     0 ----- 1
+   *    /|      /|
+   *   3 ----- 2 |
+   *   | 4 ----|-5
+   *   |/      |/             x  
+   *   7 ----- 6         y___/
+   */  
+  Chunk::BlockIter
+    iterpxpypz = iterpxpy.nextPosZ(), // 0
+    iternxnynz = iternxny.nextNegZ(), // 6
+
+    iterpxnypz = iterpxny.nextPosZ(), // 1
+    iternxpynz = iternxpy.nextNegZ(), // 7
+
+    iternxnypz = iternxny.nextPosZ(), // 2
+    iterpxpynz = iterpxpy.nextNegZ(), // 4
+  
+    iternxpypz = iternxpy.nextPosZ(), // 3
+    iterpxnynz = iterpxny.nextNegZ(); // 5
+
+  {
+    // 0, 6
+    if(iterpxpypz->opaque()) {
+      vec3 delta = vec3{.5f, .5f, .5f};
+      vec3 corner1 = centerPosition + delta;
+      float distance1 = targetCenter.distance(corner1);
+      if(distance1 < target.radius) {
+        float ds = target.radius - distance1;
+        vec3 direction = (centerPosition - corner1).normalized();
+        direction = direction * ds;
+        targetCenter += direction;
+        collided = true;
+      } else if(iternxnynz->opaque()) {
+        // not collided, check the other side
+        vec3 corner2 = centerPosition - delta;
+        float distance2 = targetCenter.distance(corner2);
+        if(distance2 < target.radius) {
+          float ds = target.radius - distance2;
+          vec3 direction = (centerPosition - corner2).normalized();
+          direction = direction * ds;
+          targetCenter += direction;
+          collided = true;
+        }
+      }
+    } else {
+      if(iternxnynz->opaque()) {
+        // not collided, check the other side
+        vec3 delta = vec3{.5f, .5f, .5f};
+        vec3 corner2 = centerPosition - delta;
+        float distance2 = targetCenter.distance(corner2);
+        if(distance2 < target.radius) {
+          float ds = target.radius - distance2;
+          vec3 direction = (centerPosition - corner2).normalized();
+          direction = direction * ds;
+          targetCenter += direction;
+          collided = true;
+        }
+      }
+    }
+  }
+
+  {
+    // 1, 7
+    if(iternxpypz->opaque()){
+      vec3 delta = vec3{.5f, -.5f, .5f};
+      vec3 corner1 = centerPosition + delta;
+      float distance1 = targetCenter.distance(corner1);
+      if(distance1 < target.radius) {
+        float ds = target.radius - distance1;
+        vec3 direction = (centerPosition - corner1).normalized();
+        direction = direction * ds;
+        targetCenter += direction;
+        collided = true;
+      } else if(iternxpynz->opaque()) {
+        // not collided, check the other side
+        vec3 corner2 = centerPosition - delta;
+        float distance2 = targetCenter.distance(corner2);
+        if(distance2 < target.radius) {
+          float ds = target.radius - distance2;
+          vec3 direction = (centerPosition - corner2).normalized();
+          direction = direction * ds;
+          targetCenter += direction;
+          collided = true;
+        }
+      }
+    } else {
+      if(iternxpynz->opaque()) {
+        // not collided, check the other side
+        vec3 delta = vec3{.5f, -.5f, .5f};
+        vec3 corner2 = centerPosition - delta;
+        float distance2 = targetCenter.distance(corner2);
+        if(distance2 < target.radius) {
+          float ds = target.radius - distance2;
+          vec3 direction = (centerPosition - corner2).normalized();
+          direction = direction * ds;
+          targetCenter += direction;
+          collided = true;
+        }
+      }
+    }
+  }
+
+  {
+    // 2, 4
+    if(iternxnypz->opaque()){
+      vec3 delta = vec3{-.5f, -.5f, .5f};
+      vec3 corner1 = centerPosition + delta;
+      float distance1 = targetCenter.distance(corner1);
+      if(distance1 < target.radius) {
+        float ds = target.radius - distance1;
+        vec3 direction = (centerPosition - corner1).normalized();
+        direction = direction * ds;
+        targetCenter += direction;
+        collided = true;
+      } else if(iterpxpynz->opaque()) {
+        // not collided, check the other side
+        vec3 corner2 = centerPosition - delta;
+        float distance2 = targetCenter.distance(corner2);
+        if(distance2 < target.radius) {
+          float ds = target.radius - distance2;
+          vec3 direction = (centerPosition - corner2).normalized();
+          direction = direction * ds;
+          targetCenter += direction;
+          collided = true;
+        }
+      }
+    } else {
+      if(iterpxpynz->opaque()) {
+        // not collided, check the other side
+      vec3 delta = vec3{-.5f, -.5f, .5f};
+        vec3 corner2 = centerPosition - delta;
+        float distance2 = targetCenter.distance(corner2);
+        if(distance2 < target.radius) {
+          float ds = target.radius - distance2;
+          vec3 direction = (centerPosition - corner2).normalized();
+          direction = direction * ds;
+          targetCenter += direction;
+          collided = true;
+        }
+      }
+    }
+  }
+
+  {
+    // 3, 5
+    if(iternxnypz->opaque()){
+      vec3 delta = vec3{-.5f, .5f, .5f};
+      vec3 corner1 = centerPosition + delta;
+      float distance1 = targetCenter.distance(corner1);
+      if(distance1 < target.radius) {
+        float ds = target.radius - distance1;
+        vec3 direction = (centerPosition - corner1).normalized();
+        direction = direction * ds;
+        targetCenter += direction;
+        collided = true;
+      } else if(iterpxnynz->opaque()) {
+        // not collided, check the other side
+        vec3 corner2 = centerPosition - delta;
+        float distance2 = targetCenter.distance(corner2);
+        if(distance2 < target.radius) {
+          float ds = target.radius - distance2;
+          vec3 direction = (centerPosition - corner2).normalized();
+          direction = direction * ds;
+          targetCenter += direction;
+          collided = true;
+        }
+      }
+    } else {
+      if(iterpxnynz->opaque()) {
+        // not collided, check the other side
+        vec3 delta = vec3{-.5f, .5f, .5f};
+        vec3 corner2 = centerPosition - delta;
+        float distance2 = targetCenter.distance(corner2);
+        if(distance2 < target.radius) {
+          float ds = target.radius - distance2;
+          vec3 direction = (centerPosition - corner2).normalized();
+          direction = direction * ds;
+          targetCenter += direction;
+          collided = true;
+        }
+      }
+    }
+  }
+
+  if(collided) {
+    target.target->localTranslate(targetCenter - originalCenter);
+  }
+  return collided;
+}
+
 void World::updateChunks() {
 
   for(auto& [coords, chunk]: mActiveChunks) {
@@ -429,7 +822,7 @@ void World::updateChunks() {
 void World::manageChunks() {
 
   uint activatedChunkCount = 0;
-  ChunkCoords playerChunkCoords = ChunkCoords::fromWorld(playerPosition());
+  ChunkCoords playerChunkCoords = ChunkCoords::fromWorld(viewPosition());
   
   for(ChunkCoords& idx: sChunkActivationVisitingPattern) {
   
@@ -558,8 +951,8 @@ void World::propagateLight(bool step) {
 
 }
 
-vec3 World::playerPosition() {
-  return mCamera.transform().position();
+vec3 World::viewPosition() {
+  return mCurrentViewPosition;
 }
 
 std::vector<ChunkCoords> World::sChunkActivationVisitingPattern{};

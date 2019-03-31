@@ -33,6 +33,7 @@ public:
   static BlockCoords fromIndex(BlockIndex index);
   static aabb3 blockBounds(Chunk* chunk, BlockIndex index);
   static aabb3 blockBounds(Chunk* chunk, const BlockCoords& coords);
+  static vec3  blockCenterPosition(Chunk* chunk, BlockIndex index);
   static BlockIndex toIndex(BlockIndex x, BlockIndex y, BlockIndex z);
 };
 
@@ -148,6 +149,11 @@ public:
     BlockCoords coords() const {
       return BlockCoords::fromIndex(blockIndex);
     }
+
+    vec3 centerPosition() const {
+      return BlockCoords::blockCenterPosition(chunk.self, blockIndex);
+    }
+
     BlockIndex index() const {
       return blockIndex;
     }

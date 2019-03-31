@@ -1033,8 +1033,12 @@ exit/B %errlev%</Command>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="CameraController.cpp" />
+    <ClCompile Include="Game.cpp" />
+    <ClCompile Include="Gameplay\Collision.cpp" />
+    <ClCompile Include="Gameplay\FollowCamera.cpp" />
     <ClCompile Include="GameCommon.cpp" />
+    <ClCompile Include="Gameplay\Entity.cpp" />
+    <ClCompile Include="Gameplay\Player.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Utils\Config.cpp" />
     <ClCompile Include="Utils\FileCache.cpp" />
@@ -1050,9 +1054,13 @@ exit/B %errlev%</Command>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CameraController.hpp" />
+    <ClInclude Include="Game.hpp" />
+    <ClInclude Include="Gameplay\Collision.hpp" />
+    <ClInclude Include="Gameplay\FollowCamera.hpp" />
     <ClInclude Include="EngineBuildPreferences.hpp" />
     <ClInclude Include="GameCommon.hpp" />
+    <ClInclude Include="Gameplay\Entity.hpp" />
+    <ClInclude Include="Gameplay\Player.hpp" />
     <ClInclude Include="Utils\Config.hpp" />
     <ClInclude Include="Utils\FileCache.hpp" />
     <ClInclude Include="VoxelRenderer\VoxelRenderer.hpp" />

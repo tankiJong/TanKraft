@@ -18,11 +18,12 @@
 #include "Engine/File/FileSystem.hpp"
 #include "Engine/Application/Application.hpp"
 #include "Engine/Debug/Draw.hpp"
-#include "Game/CameraController.hpp"
+#include "Game/Gameplay/FollowCamera.hpp"
 #include "Game/VoxelRenderer/VoxelRenderer.hpp"
 #include "Game/GameCommon.hpp"
 #include "Game/World/World.hpp"
 #include "Game/Utils/FileCache.hpp"
+#include "Game/Game.hpp"
 
 #define SCENE_BUNNY
 // #define SCENE_1
@@ -62,12 +63,10 @@ protected:
   void renderStatisticsOverlay() const;
   // Camera* mCamera = nullptr;
   // CameraController* cameraController = nullptr;
-  VoxelRenderer* sceneRenderer = nullptr;
 
   S<RHIDevice> mDevice;
   S<RHIContext> mContext;
-
-  World* mWorld = nullptr;
+  Game mGame;
 };
 
 void GameApplication::onInit() {
@@ -75,7 +74,6 @@ void GameApplication::onInit() {
   SAFE_DELETE(gGameClock);
   gGameClock = GetMainClock().createChild();
 
-  sceneRenderer = new VoxelRenderer();
 
   // mCamera = new Camera();
   // mCamera->setCoordinateTransform(gGameCoordsTransform);
@@ -101,23 +99,23 @@ void GameApplication::onInit() {
   // mBvh->render();
 
   // sceneRenderer->setCamera(*mCamera);
-  sceneRenderer->onLoad(*mContext);
+
 
   FileCache::get().init();
 
-  mWorld = new World();
-  mWorld->onInit();
-  sceneRenderer->setWorld(mWorld);
+
   Input::Get().mouseLockCursor(true);
   // Input::Get().mouseHideCursor(false);
 
   BlockDef::init();
+
+  mGame.onInit();
 }
 
 void GameApplication::onInput() {
   static bool firstFrame = true;
   if(!firstFrame) {
-    mWorld->onInput();
+    mGame.onInput();
   } else {
     firstFrame = !firstFrame;
     return;
@@ -130,9 +128,10 @@ void GameApplication::onInput() {
 
   Window::Get()->setTitle(Stringf("Tanki - Tankraft. Frame time: %.0f ms",
                                   float(frameAvgSec * 1000.0)).c_str());
+
+  mGame.onUpdate();
   // cameraController->onInput();
   // cameraController->onUpdate(dt);
-  mWorld->onUpdate();
   // vec2 rotation = vec2::zero;
   // if (Input::Get().isKeyDown(MOUSE_RBUTTON)) {
   //   rotation = Input::Get().mouseDeltaPosition(true) * 180.f * dt;
@@ -159,7 +158,7 @@ void GameApplication::onInput() {
 }
 
 void GameApplication::onRender() const {
-  mWorld->onRender(*sceneRenderer);
+  mGame.onRender();
   renderStatisticsOverlay();
   // sceneRenderer->onRenderFrame(*mContext);
 }
@@ -169,13 +168,11 @@ void GameApplication::onStartFrame() {
 }
 
 void GameApplication::onEndFrame() {
-  mWorld->onEndFrame();
+  mGame.postUpdate();
 }
 
 void GameApplication::onDestroy() {
-  mWorld->onDestroy();
-  SAFE_DELETE(mWorld);
-  SAFE_DELETE(sceneRenderer);
+  mGame.onDestroy();
   mDevice->cleanup();
 }
 
@@ -202,7 +199,7 @@ void GameApplication::renderStatisticsOverlay() const {
 
     ImGui::Separator();
     
-    auto rc = mWorld->playerRaycastResult();
+    auto rc = mGame.playerRaycastResult();
     if(rc.impacted()) {
 
       ivec3 coord = rc.contact.block.coords();

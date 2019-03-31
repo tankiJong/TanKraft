@@ -71,6 +71,11 @@ aabb3 BlockCoords::blockBounds(Chunk* chunk, BlockIndex index) {
   return { mins, mins + vec3::one };
 }
 
+vec3 BlockCoords::blockCenterPosition(Chunk* chunk, BlockIndex index) {
+  vec3 mins = vec3{fromIndex(index)} + chunk->bounds().mins;
+  return mins + vec3(.5f);
+}
+
 bool ChunkCoords::operator>(const ChunkCoords& rhs) const {
   return (y != rhs.y) ? (y > rhs.y)
     : ((x != rhs.x) ? (x > rhs.x) : false);
