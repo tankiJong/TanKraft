@@ -8,8 +8,8 @@ Entity::Entity() {
 
 void Entity::onRender() {
   vec3 position =  collision.center();
-  if(!possessed) {
-    Debug::setDepth(Debug::DEBUG_DEPTH_DISABLE);
+  // if(!possessed) {
+  {  Debug::setDepth(Debug::DEBUG_DEPTH_DISABLE);
     Debug::drawSphere(
       position, 
       collision.radius, 10, 10, 

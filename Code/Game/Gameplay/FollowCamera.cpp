@@ -57,10 +57,6 @@ void FollowCamera1Person::onInput() {
     mCamera.transform().localRotation() = vec3::zero;
   }
 
-  if(Input::Get().isKeyJustDown('L')) {
-    Input::Get().toggleMouseLockCursor();
-  }
-
   if (Input::Get().isKeyDown(MOUSE_MBUTTON)) {
     vec2 deltaMouse = Input::Get().mouseDeltaPosition();
     addForce(-mCamera.transform().right() * deltaMouse.x / (float)GetMainClock().frame.second);
@@ -138,12 +134,55 @@ vec3 FollowCamera1Person::speed() const {
   return mMoveSpeed * mSpeedScale;
 }
 
+void FollowCameraOverSholder::onInput() {
+  float dt = (float)GetMainClock().frame.second;
+
+  if(Input::Get().isMouseLocked()) {
+    vec2 deltaMouse = Input::Get().mouseDeltaPosition(true);
+    mRotateAroundY += deltaMouse.y * 10 / dt;
+    mRotateAroundZ += deltaMouse.x * 10 / dt;
+  }
+
+  // ImGui::Begin("Camera Control"); {
+  //   ImGui::DragFloat("rotate y", &mRotateAroundY);
+  //   ImGui::DragFloat("rotate z", &mRotateAroundZ);
+  //   ImGui::DragFloat3("local position", (float*)&mCamera.transform().localPosition());
+  //   ImGui::DragFloat3("local rotation", (float*)&mCamera.transform().localRotation());
+  // } ImGui::End();
+}
+
 void FollowCameraOverSholder::onUpdate(float dt) {
   vec3 position;
+
+  mRotateAroundY = clamp(mRotateAroundY, -30.f, 30.f);
 
   position.x = mDistanceFromTarget * cosDegrees(mRotateAroundY) * cosDegrees(mRotateAroundZ);
   position.y = mDistanceFromTarget * cosDegrees(mRotateAroundY) * sinDegrees(mRotateAroundZ);
   position.z = mDistanceFromTarget * sinDegrees(mRotateAroundY);
 
-  mCamera.lookAt(position, vec3::zero, vec3::forward);
+  mat44 t = mat44::translation(position);
+
+  vec3 newx = (-position).normalized();
+  float dot = vec3{0,0,1}.dot(newx);
+  vec3 newy;
+  vec3 newz;
+
+  if(equal(dot, -1.f) || equal(dot, 1.f)) {
+    newz = newx.cross(vec3{0, 1, 0}).normalized();
+    newy = newz.cross(newx).normalized();
+  } else {
+    newy = vec3{0,0,1}.cross(newx).normalized();
+    newz = newx.cross(newy);
+  }
+
+  mat44 r(
+    vec4{newx, 0},
+    vec4{newy, 0},
+    vec4{newz, 0}
+    );
+  t = t * r;
+
+  mCamera.transform().setlocalTransform(t);
+  
+
 }

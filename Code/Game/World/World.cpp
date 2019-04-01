@@ -440,11 +440,23 @@ bool World::collide(CollisionSphere& target) const {
           collided = true;
         }
       }
+    } else if(iternynz->opaque()) {
+      // not collided, check the other side
+      vec2 delta = vec2{.5f, .5f};
+      vec2 corner2 = centeryz - delta;
+      float distance2 = targetCenter.yz().distance(corner2);
+      if(distance2 < target.radius) {
+        float ds = target.radius - distance2;
+        vec2 direction = (centeryz - corner2).normalized();
+        direction = direction * ds;
+        targetCenter += vec3{0, direction.x, direction.y};
+        collided = true;
+      }
     }
 
     // 2, 4
     if(iternypz->opaque()){
-      vec2 delta = vec2{.5f, -.5f};
+      vec2 delta = vec2{-.5f, .5f};
       vec2 corner1 = centeryz + delta;
       float distance1 = targetCenter.yz().distance(corner1);
       if(distance1 < target.radius) {
@@ -465,6 +477,18 @@ bool World::collide(CollisionSphere& target) const {
           collided = true;
         }
       }
+    } else if(iterpynz->opaque()) {
+      // not collided, check the other side
+      vec2 delta = vec2{-.5f, .5f};
+      vec2 corner2 = centeryz - delta;
+      float distance2 = targetCenter.yz().distance(corner2);
+      if(distance2 < target.radius) {
+        float ds = target.radius - distance2;
+        vec2 direction = (centeryz - corner2).normalized();
+        direction = direction * ds;
+        targetCenter += vec3{0, direction.x, direction.y};
+        collided = true;
+      }
     }
   }
   // xz - const y
@@ -477,8 +501,8 @@ bool World::collide(CollisionSphere& target) const {
     vec2 centerxz = centerPosition.xz();
 
     // 1, 3
-    if(iternxpz->opaque()){
-      vec2 delta = vec2{.5f, .5f};
+    if(iternxpz->opaque()) {
+      vec2 delta = vec2{-.5f, .5f};
       vec2 corner1 = centerxz + delta;
       float distance1 = targetCenter.xz().distance(corner1);
       if(distance1 < target.radius) {
@@ -499,11 +523,23 @@ bool World::collide(CollisionSphere& target) const {
           collided = true;
         }
       }
+    } else if(iterpxnz->opaque()) {
+      // not collided, check the other side
+      vec2 delta = vec2{-.5f, .5f};
+      vec2 corner2 = centerxz - delta;
+      float distance2 = targetCenter.xz().distance(corner2);
+      if(distance2 < target.radius) {
+        float ds = target.radius - distance2;
+        vec2 direction = (centerxz - corner2).normalized();
+        direction = direction * ds;
+        targetCenter += vec3{direction.x, 0, direction.y};
+        collided = true;
+      }
     }
 
     // 2, 4
     if(iterpxpz->opaque()){
-      vec2 delta = vec2{.5f, -.5f};
+      vec2 delta = vec2{.5f, .5f};
       vec2 corner1 = centerxz + delta;
       float distance1 = targetCenter.xz().distance(corner1);
       if(distance1 < target.radius) {
@@ -523,6 +559,18 @@ bool World::collide(CollisionSphere& target) const {
           targetCenter += vec3{direction.x, 0, direction.y};;
           collided = true;
         }
+      }
+    } else if(iternxnz->opaque()) {
+      // not collided, check the other side
+      vec2 delta = vec2{.5f, .5f};
+      vec2 corner2 = centerxz - delta;
+      float distance2 = targetCenter.xz().distance(corner2);
+      if(distance2 < target.radius) {
+        float ds = target.radius - distance2;
+        vec2 direction = (centerxz - corner2).normalized();
+        direction = direction * ds;
+        targetCenter += vec3{direction.x, 0, direction.y};;
+        collided = true;
       }
     }
   }
@@ -684,7 +732,7 @@ bool World::collide(CollisionSphere& target) const {
 
   {
     // 1, 7
-    if(iternxpypz->opaque()){
+    if(iterpxnypz->opaque()){
       vec3 delta = vec3{.5f, -.5f, .5f};
       vec3 corner1 = centerPosition + delta;
       float distance1 = targetCenter.distance(corner1);
@@ -709,7 +757,7 @@ bool World::collide(CollisionSphere& target) const {
     } else {
       if(iternxpynz->opaque()) {
         // not collided, check the other side
-        vec3 delta = vec3{.5f, -.5f, .5f};
+      vec3 delta = vec3{.5f, -.5f, .5f};
         vec3 corner2 = centerPosition - delta;
         float distance2 = targetCenter.distance(corner2);
         if(distance2 < target.radius) {
@@ -766,7 +814,7 @@ bool World::collide(CollisionSphere& target) const {
 
   {
     // 3, 5
-    if(iternxnypz->opaque()){
+    if(iternxpypz->opaque()){
       vec3 delta = vec3{-.5f, .5f, .5f};
       vec3 corner1 = centerPosition + delta;
       float distance1 = targetCenter.distance(corner1);

@@ -15,7 +15,8 @@ void Game::onInit() {
   mWorld = new World();
   mSceneRenderer = new VoxelRenderer();
   mSceneRenderer->setWorld(mWorld);
-  mCameraController = new FollowCamera1Person(nullptr);
+  mCameraController = new FollowCameraOverSholder(nullptr);
+  mCameraController->world(mWorld);
 
   Player* player = addEntity<Player>();
   Player* debugPlayer = addEntity<Player>();
@@ -35,7 +36,7 @@ void Game::onInit() {
     // TODO: look at is buggy
     // mCameraController->camera().lookAt({ -3, -3, 3 }, { 0, 0, 0 }, {0, 0, 1});
    
-    mCameraController->speedScale(10);
+    // mCameraController->speedScale(10);
 
     Debug::setCamera(&mCameraController->camera());
   }
@@ -55,20 +56,16 @@ void Game::onInput() {
   mCameraController->onInput();
 
   {
-    mCameraController->speedScale((Input::Get().isKeyDown(KEYBOARD_SHIFT) ? 100.f : 10.f));
 
     bool possessPlayer = mPossessPlayer;
-    float scale = mCameraController->speedScale();
     vec3 camPosition = mCameraController->camera().transform().position();
     vec3 camRotation = mCameraController->camera().transform().localRotation();
     ImGui::Begin("Control");
     ImGui::Checkbox("Enable raycast", &mEnableRaycast);
     ImGui::Checkbox("Possess Player", &possessPlayer);
-    ImGui::SliderFloat("Camera speed", &scale, 1, 500, "%0.f", 10);
     ImGui::SliderFloat3("Camera Position", (float*)&camPosition, 0, 10);
     ImGui::SliderFloat3("Camera Rotation", (float*)&mCameraController->camera().transform().localRotation(), -360, 360);
     ImGui::End();
-    mCameraController->speedScale(scale);
 
     if(possessPlayer != mPossessPlayer) {
       if(possessPlayer) {
@@ -84,6 +81,10 @@ void Game::onInput() {
     mEnableRaycast = !mEnableRaycast;
   }
 
+  
+  if(Input::Get().isKeyJustDown('L')) {
+    Input::Get().toggleMouseLockCursor();
+  }
   
   if(Input::Get().isKeyJustDown(MOUSE_LBUTTON)) {
     if(mPlayerRaycast.impacted()) {
@@ -125,11 +126,11 @@ void Game::onInput() {
 
 void Game::onUpdate() {
   float dt = (float)GetMainClock().frame.second;
-  mCameraController->onUpdate(dt);
 
   mWorld->onUpdate(mCameraController->camera().transform().position());
-
   updateEntities();
+
+  mCameraController->onUpdate(dt);
 }
 
 void Game::onRender() const {

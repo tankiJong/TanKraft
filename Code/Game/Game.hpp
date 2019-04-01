@@ -41,7 +41,7 @@ protected:
 
   std::vector<Entity*> mEntities;
 
-  FollowCamera1Person* mCameraController = nullptr;
+  FollowCameraOverSholder* mCameraController = nullptr;
   raycast_result_t mPlayerRaycast;
 
   // for debug

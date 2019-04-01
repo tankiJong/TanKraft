@@ -6,6 +6,7 @@
 
 class Camera;
 class Entity;
+class World;
 
 enum eCameraMode {
   CAMERA_UNDEFINED = -1,
@@ -24,12 +25,13 @@ public:
 
   const Camera& camera() const { return mCamera; }
   Camera& camera() { return mCamera; }
-
+  void world(World* w) { mWorld = w; }
   void possessTarget(Entity* target);
 protected:
 
   Camera mCamera;
-  Entity* mTarget;
+  Entity* mTarget = nullptr;
+  World* mWorld = nullptr;
   eCameraMode mCameraMode = CAMERA_UNDEFINED;
 };
 
@@ -66,9 +68,9 @@ public:
   void onUpdate(float dt) override;
 
 protected:
-  float mRotateAroundZ = 0.f;
+  float mRotateAroundZ = 180.f;
   float mRotateAroundY = 0.f;
-  float mDistanceFromTarget = 3.f;
+  float mDistanceFromTarget = 2.f;
 };
 
 class FollowCameraFixedAngle: public FollowCameraOverSholder {
