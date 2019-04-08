@@ -15,24 +15,25 @@ void Game::onInit() {
   mWorld = new World();
   mSceneRenderer = new VoxelRenderer();
   mSceneRenderer->setWorld(mWorld);
-  mCameraController = new FollowCameraOverSholder(nullptr);
+  mCameraController = new FollowCamera1Person(nullptr);
   mCameraController->world(mWorld);
 
   Player* player = addEntity<Player>();
-  Player* debugPlayer = addEntity<Player>();
+  Player* debugPlayer = addEntity<Spectator>();
   mPlayer = player;
-  mInspector = debugPlayer;
+  mSpectator = debugPlayer;
 
   player->physicsMode(Entity::PHY_NORMAL);
-  mInspector->physicsMode(Entity::PHY_GHOST);
+  mSpectator->physicsMode(Entity::PHY_GHOST);
 
-  mCameraController->possessTarget(mPossessPlayer ? mPlayer : mInspector);
+  mCameraController->possessTarget(mPossessPlayer ? mPlayer : mSpectator);
+  mCameraController->camera().transform().localPosition() = {.0f, .0f, 1.65f - .5f};
   {
     mPlayer->transform().localPosition() = vec3{10,-5,108};
-    mInspector->transform().localPosition() = vec3{3,-5,108};
+    mSpectator->transform().localPosition() = vec3{3,-5,108};
 
     mPlayer->transform().localRotation() = vec3{0,0,0};
-    mInspector->transform().localRotation() = vec3{0,0,0};
+    mSpectator->transform().localRotation() = vec3{0,0,0};
     // TODO: look at is buggy
     // mCameraController->camera().lookAt({ -3, -3, 3 }, { 0, 0, 0 }, {0, 0, 1});
    
@@ -50,13 +51,25 @@ void Game::onInput() {
   if(mPossessPlayer) {
     mPlayer->onInput();
   } else {
-    mInspector->onInput();
+    mSpectator->onInput();
+  }
+
+  if(Input::Get().isKeyJustDown(KEYBOARD_F2) && mPossessPlayer) {
+    eCameraMode mode = (eCameraMode)((mCameraController->cameraMode() + 1) % NUM_CAMERA_MODE);
+    setCamera(mode, mCameraController->target());
+  }
+
+  if(Input::Get().isKeyJustDown(KEYBOARD_F3) && mPossessPlayer) {
+    Entity::ePhysicsMode mode 
+      = (Entity::ePhysicsMode)
+        ((mCameraController->target()->physicsMode() + 1) % Entity::NUM_PHY_MODE);
+
+    mCameraController->target()->physicsMode(mode);
   }
 
   mCameraController->onInput();
 
   {
-
     bool possessPlayer = mPossessPlayer;
     vec3 camPosition = mCameraController->camera().transform().position();
     vec3 camRotation = mCameraController->camera().transform().localRotation();
@@ -67,11 +80,15 @@ void Game::onInput() {
     ImGui::SliderFloat3("Camera Rotation", (float*)&mCameraController->camera().transform().localRotation(), -360, 360);
     ImGui::End();
 
+    if(Input::Get().isKeyJustDown(KEYBOARD_F4)) {
+      possessPlayer = !possessPlayer;
+    }
+
     if(possessPlayer != mPossessPlayer) {
       if(possessPlayer) {
         mCameraController->possessTarget(mPlayer);
       } else {
-        mCameraController->possessTarget(mInspector);
+        mCameraController->possessTarget(mSpectator);
       }
       mPossessPlayer = possessPlayer;
     }
@@ -131,6 +148,10 @@ void Game::onUpdate() {
   updateEntities();
 
   mCameraController->onUpdate(dt);
+
+  if(mPossessPlayer) {
+    mSpectator->transform() =  mPlayer->transform();
+  }
 }
 
 void Game::onRender() const {
@@ -214,6 +235,35 @@ void Game::onRender() const {
   for(Entity* e: mEntities) {
     e->onRender();
   }
+
+
+  switch(mPlayer->physicsMode()) { 
+    case Entity::PHY_NORMAL: 
+      Debug::drawText2("Physics Mode Walk", 15.f, vec2{10.f, 10.f}, 0);
+    break;
+    case Entity::PHY_FLY: 
+      Debug::drawText2("Physics Mode Fly", 15.f, vec2{10.f, 10.f}, 0);
+    break;
+    case Entity::PHY_GHOST: 
+      Debug::drawText2("Physics Mode Ghost", 15.f, vec2{10.f, 10.f}, 0);
+    break;
+  }
+
+  if(mPossessPlayer) {
+    switch(mCameraController->cameraMode()) {
+      case CAMERA_1_PERSON: 
+        Debug::drawText2("Camera Mode 1st Person", 15.f, vec2{10.f, 30.f}, 0);
+      break;
+      case CAMERA_OVER_SHOULDER: 
+        Debug::drawText2("Camera Mode Over Shoulder", 15.f, vec2{10.f, 30.f}, 0);
+      break;
+      case CAMERA_FIXED_ANGLE: 
+        Debug::drawText2("Camera Mode Fixed Angle", 15.f, vec2{10.f, 30.f}, 0);
+      break;
+    }
+  } else {
+      Debug::drawText2("Spectator Mode", 15.f, vec2{10.f, 30.f}, 0);
+  }
 }
 
 void Game::postUpdate() {
@@ -226,6 +276,31 @@ void Game::onDestroy() {
   SAFE_DELETE(mSceneRenderer);
 }
 
+void Game::setCamera(eCameraMode mode, Entity* target) {
+
+  FollowCamera* camera = nullptr;
+  switch(mode) { 
+    case CAMERA_1_PERSON:
+      camera = new FollowCamera1Person(target);
+    break;
+    case CAMERA_OVER_SHOULDER:
+      camera = new FollowCameraOverSholder(target);
+    break;
+    case CAMERA_FIXED_ANGLE: 
+      camera = new FollowCameraFixedAngle(target);
+    break;
+  }
+
+  if(mCameraController != nullptr) {
+    *camera = std::move(*mCameraController);
+    SAFE_DELETE(mCameraController);
+    mCameraController = camera;
+  }
+
+  mCameraController->camera().transform().localPosition() = {.0f, .0f, 1.65f - .5f};
+
+}
+
 void Game::updateEntities() {
   for(Entity* e: mEntities) {
     e->onUpdate();
@@ -233,7 +308,7 @@ void Game::updateEntities() {
 
   for(Entity* e: mEntities) {
     if(e->physicsMode() == Entity::PHY_GHOST) continue; 
-    bool collided = mWorld->collide(e->collision);
+    bool collided = mWorld->collide(e->collisions()[0]);
     if(collided) {
       e->speed(vec3::zero);
     }

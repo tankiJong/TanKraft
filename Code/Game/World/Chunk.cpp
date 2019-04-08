@@ -672,8 +672,8 @@ void Chunk::generateBlocks() {
 void Chunk::initLights() {
   
   // populate outdoor lighting
-  for(uint y = 0; y < kSizeY; y++) {
-    for(uint x = 0; x < kSizeX; x++) {
+  for(BlockIndex y = 0; y < kSizeY; y++) {
+    for(BlockIndex x = 0; x < kSizeX; x++) {
       BlockIndex index = BlockCoords::toIndex(x, y, kSizeZ - 1);
       BlockIter iter = blockIter(index);
       while(!iter->opaque() && iter.valid()) {
@@ -683,13 +683,11 @@ void Chunk::initLights() {
     }
   }
 
-  for(uint y = 0; y < kSizeY; y++) {
-    for(uint x = 0; x < kSizeX; x++) {
+  for(BlockIndex y = 0; y < kSizeY; y++) {
+    for(BlockIndex x = 0; x < kSizeX; x++) {
       BlockIndex index = BlockCoords::toIndex(x, y, kSizeZ - 1);
       BlockIter iter = blockIter(index);
       while(!iter->opaque() && iter.valid()) {
-        Block& b = *iter;
-
         EXPECTS(iter->exposedToSky());
 
         BlockIter neighbors[4] = {

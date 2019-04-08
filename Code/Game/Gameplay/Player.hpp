@@ -15,3 +15,8 @@ public:
 protected:
 
 };
+
+class Spectator: public Player {
+public:
+  void onRender() override {}
+};

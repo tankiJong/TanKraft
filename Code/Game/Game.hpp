@@ -23,7 +23,7 @@ public:
 
   raycast_result_t playerRaycastResult() const { return mPlayerRaycast; }
 protected:
-
+  void setCamera(eCameraMode mode, Entity* target);
   template<typename E>
   E* addEntity() {
     E* e = new E();
@@ -37,14 +37,14 @@ protected:
   VoxelRenderer* mSceneRenderer = nullptr;
 
   Player* mPlayer = nullptr;
-  Player* mInspector = nullptr;
+  Player* mSpectator = nullptr;
 
   std::vector<Entity*> mEntities;
 
-  FollowCameraOverSholder* mCameraController = nullptr;
+  FollowCamera* mCameraController = nullptr;
   raycast_result_t mPlayerRaycast;
 
   // for debug
   bool mEnableRaycast = true;
-  bool mPossessPlayer = false;
+  bool mPossessPlayer = true;
 };

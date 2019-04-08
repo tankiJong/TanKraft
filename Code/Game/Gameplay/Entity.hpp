@@ -12,30 +12,37 @@ public:
     PHY_NORMAL,
     PHY_FLY,
     PHY_GHOST,
+    NUM_PHY_MODE,
   };
 
   Entity();
   virtual ~Entity() = default;
 
-  virtual void onUpdate() = 0;
+  virtual void onUpdate();
   virtual void onRender();
 
   Transform& transform() { return mTransform; }
   ePhysicsMode physicsMode() const { return mPhysicsMode; }
   void physicsMode(ePhysicsMode mode) { mPhysicsMode = mode; }
   void speed(vec3 speed) { mSpeed = speed; }
-
+  span<CollisionSphere> collisions() { return { mCollisions.data(), mCollisionCounts };}
+  span<const CollisionSphere> collisions() const { return { mCollisions.data(), mCollisionCounts };}
   bool possessed = false;
-  CollisionSphere  collision;
 
   static constexpr float kAccelerationScale = 50.f;
+  static constexpr float kMaxAcceleration = 100.f;
+  static constexpr float kMaxSpeed = 5.f;
 
 protected:
-  void accelerate(const vec3& force);
+  void addWillpower(const vec3& power);
   ePhysicsMode mPhysicsMode = PHY_GHOST;
   Transform  mTransform;
   Camera* mCamera;
   
-  vec3 mAcceleration;
+  std::array<CollisionSphere, 10>  mCollisions;
+  uint mCollisionCounts;
+
   vec3 mSpeed;
+
+  vec3 mWillpower;
 };

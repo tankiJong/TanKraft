@@ -7,7 +7,6 @@
 #include "Engine/Memory/RingBuffer.hpp"
 #include "Game/Gameplay/Collision.hpp"
 
-
 class Chunk;
 class VoxelRenderer;
 
@@ -55,6 +54,7 @@ public:
   void onEndFrame();
 
   bool collide(CollisionSphere& target) const;
+  bool collide(span<CollisionSphere> target) const;
 
 protected:
 

@@ -29,7 +29,6 @@ void World::onInit() {
 
 void World::onInput() {
   Debug::drawText("hello text", 4, vec3::zero, 0);
-  Debug::drawText2("hello text2d", 16, vec2::zero, 0);
 
   if(Input::Get().isKeyDown('T')) {
     gGameClock->scale(10000);
@@ -54,13 +53,13 @@ void World::onInput() {
 }
 
 void World::onUpdate(const vec3& viewPosition) {
-  float dt = (float)GetMainClock().frame.second;
+//  float dt = (float)GetMainClock().frame.second;
   mCurrentViewPosition = viewPosition;
   {
     ImGui::Begin("Environment Noises");
     {
       float noise = Compute1dPerlinNoise(
-        float(gGameClock->total.second) / 86400.f, .003, 9);
+        float(gGameClock->total.second) / 86400.f, .003f, 9.f);
       noise = rangeMap(noise, .5f, .9f, 0.f, 1.f);
       noise = clampf01(noise);
       size_t writeIndex = mWeatherNoiseSample.push(noise);
@@ -70,7 +69,7 @@ void World::onUpdate(const vec3& viewPosition) {
     }
 
     {
-      float noise = Compute1dPerlinNoise(float(gGameClock->total.second) / 86400.f, .005, 9);
+      float noise = Compute1dPerlinNoise(float(gGameClock->total.second) / 86400.f, .005f, 9.f);
       noise = rangeMap(noise, -1.f, 1.f, .8f, 1.f);
       // noise = clampf01(noise);
       // noise = 0;
@@ -502,7 +501,7 @@ bool World::collide(CollisionSphere& target) const {
 
     // 1, 3
     if(iternxpz->opaque()) {
-      vec2 delta = vec2{-.5f, .5f};
+      vec2 delta = vec2{ -.5f, .5f };
       vec2 corner1 = centerxz + delta;
       float distance1 = targetCenter.xz().distance(corner1);
       if(distance1 < target.radius) {
@@ -857,6 +856,10 @@ bool World::collide(CollisionSphere& target) const {
     target.target->localTranslate(targetCenter - originalCenter);
   }
   return collided;
+}
+
+bool World::collide(span<CollisionSphere>) const {
+  return false;
 }
 
 void World::updateChunks() {

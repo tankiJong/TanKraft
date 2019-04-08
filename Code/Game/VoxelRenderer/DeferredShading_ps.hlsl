@@ -2,7 +2,6 @@
 #include "../SceneRenderer/Lighting.hlsli"
 
 
-
 #define _in(T) const in T
 #define _inout(T) inout T
 #define _out(T) out T
@@ -301,7 +300,7 @@ PSOutput main(PostProcessingVSOutput input)
 {
 
 	PSOutput output;
-
+	
 	float4 color = gTexAlbedo.Sample(gSampler, input.tex);
 	color = pow(color, 2.2f);
 	// float4 color = float4(1, 1, 1, 1);
@@ -323,7 +322,15 @@ PSOutput main(PostProcessingVSOutput input)
 	float3 world = depthToWorld(input.tex, .5f);
 
 	float3 direction = normalize(world - camPosition.xyz);
+	enableDebug = true;
 
+	if(input.tex.x > .5f && input.tex.x < .6f && input.tex.y > .5f && input.tex.y < .6f) {
+		float depth = gTexDepth.Sample(gSampler, input.tex).x;
+		float3 worldPos = depthToWorld(input.tex, depth);
+		float3 pixelPos = depthToWorld(input.tex, 0);
+		DebugDrawLine(pixelPos, worldPos, color, color, 0.f.xx, 1.f.xx);
+
+	}
 	// R = mul(flipAxis, R);
 	// direction = mul(flipAxis, direction);
 	float3x3 flipAxis = {

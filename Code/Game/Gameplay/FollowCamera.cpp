@@ -20,13 +20,14 @@ static const vec2 MAX_ANGULAR_ACCELERATION{ 180.f };
 FollowCamera::FollowCamera(Entity* target, eCameraMode mode)
   : mTarget(target)
   , mCameraMode(mode) {
+  mCamera = new Camera();
   if(mTarget != nullptr) {
-    mCamera.transform().parent() = &mTarget->transform();
+    mCamera->transform().parent() = &mTarget->transform();
   }
 
-  mCamera.setCoordinateTransform(gGameCoordsTransform);
-  mCamera.transform().setRotationOrder(ROTATION_YZX);
-  mCamera.setProjectionPrespective(70, 3.f*CLIENT_ASPECT, 3.f, 0.100000f, Config::kMaxActivateDistance);
+  mCamera->setCoordinateTransform(gGameCoordsTransform);
+  mCamera->transform().setRotationOrder(ROTATION_YZX);
+  mCamera->setProjectionPrespective(70, 3.f*CLIENT_ASPECT, 3.f, 0.100000f, Config::kMaxActivateDistance);
 }
 
 void FollowCamera::possessTarget(Entity* target) {
@@ -37,30 +38,39 @@ void FollowCamera::possessTarget(Entity* target) {
   mTarget = target;
 
   if(target == nullptr) {
-    vec3 position = mCamera.transform().position();
-    Euler rotation = mCamera.transform().rotation();
-    mCamera.transform().parent() = nullptr;
-    mCamera.transform().localRotation() = rotation;
-    mCamera.transform().localPosition() = position;
+    vec3 position = mCamera->transform().position();
+    Euler rotation = mCamera->transform().rotation();
+    mCamera->transform().parent() = nullptr;
+    mCamera->transform().localRotation() = rotation;
+    mCamera->transform().localPosition() = position;
   } else {
-    mCamera.transform().parent() = &mTarget->transform();
+    mCamera->transform().parent() = &mTarget->transform();
     mTarget->possessed = true;
-    mTarget->mCamera = &mCamera;
+    mTarget->mCamera = mCamera;
   }
 
 }
 
-void FollowCamera1Person::onInput() {
+FollowCamera& FollowCamera::operator=(FollowCamera&& rhs) {
+  mCamera = rhs.mCamera;
+  mTarget = rhs.mTarget;
+  mWorld = rhs.mWorld;
 
-  if(Input::Get().isKeyJustDown(KEYBOARD_SPACE)) {
-    mCamera.transform().localPosition() = vec3::zero;
-    mCamera.transform().localRotation() = vec3::zero;
-  }
+  rhs.mCamera = nullptr;
+
+  return *this;
+}
+
+FollowCamera::FollowCamera() {
+  SAFE_DELETE(mCamera);
+}
+
+void FollowCamera1Person::onInput() {
 
   if (Input::Get().isKeyDown(MOUSE_MBUTTON)) {
     vec2 deltaMouse = Input::Get().mouseDeltaPosition();
-    addForce(-mCamera.transform().right() * deltaMouse.x / (float)GetMainClock().frame.second);
-    addForce(mCamera.transform().up() * deltaMouse.y / (float)GetMainClock().frame.second);
+    addForce(-mCamera->transform().right() * deltaMouse.x / (float)GetMainClock().frame.second);
+    addForce(mCamera->transform().up() * deltaMouse.y / (float)GetMainClock().frame.second);
   }
   if(Input::Get().isMouseLocked()) {
     vec2 deltaMouse = Input::Get().mouseDeltaPosition(true);
@@ -78,7 +88,7 @@ void FollowCamera1Person::onUpdate(float dt) {
     clamp(acceleration, -MAX_ACCELERATION, MAX_ACCELERATION);
 
     mMoveSpeed += acceleration;
-    mCamera.translate(mMoveSpeed * dt * speedScale());
+    mCamera->translate(mMoveSpeed * dt * speedScale());
   }
 
   {
@@ -88,24 +98,24 @@ void FollowCamera1Person::onUpdate(float dt) {
     mAngularSpeed += angularAcce * dt;
     Euler angle{ 0, -mAngularSpeed.y * dt, mAngularSpeed.x * dt };
     
-    mCamera.rotate(angle);
+    mCamera->rotate(angle);
 
-    mCamera.transform().localRotation().y
-     = clamp(mCamera.transform().localRotation().y,
+    mCamera->transform().localRotation().y
+     = clamp(mCamera->transform().localRotation().y,
                   -85.f, 85.f);
 
-    mCamera.transform().localPosition().z
-     = clamp<float>(mCamera.transform().localPosition().z, 0, Chunk::kSizeZ);
+    mCamera->transform().localPosition().z
+     = clamp<float>(mCamera->transform().localPosition().z, 0, Chunk::kSizeZ);
   }
 
-  // transform.localRotation() = mCamera.transfrom().localRotation();
+  // transform.localRotation() = mCamera->transfrom().localRotation();
   // Transform t;
   // Debug::drawBasis(t, 0);
   // ImGui::gizmos(mCamera, transform, ImGuizmo::ROTATE);
-  // mat44 view = mCamera.view(), proj = mCamera.projection();
+  // mat44 view = mCamera->view(), proj = mCamera->projection();
   // mat44 trans = transform.localToWorld();
   // ImGuizmo::DrawCube((float*)&view, (float*)&proj, (float*)&trans);
-  // mCamera.transfrom().localRotation() = vec3::zero;
+  // mCamera->transfrom().localRotation() = vec3::zero;
 
   // antanuation
   mMoveSpeed = vec3::zero;
@@ -146,8 +156,8 @@ void FollowCameraOverSholder::onInput() {
   // ImGui::Begin("Camera Control"); {
   //   ImGui::DragFloat("rotate y", &mRotateAroundY);
   //   ImGui::DragFloat("rotate z", &mRotateAroundZ);
-  //   ImGui::DragFloat3("local position", (float*)&mCamera.transform().localPosition());
-  //   ImGui::DragFloat3("local rotation", (float*)&mCamera.transform().localRotation());
+  //   ImGui::DragFloat3("local position", (float*)&mCamera->transform().localPosition());
+  //   ImGui::DragFloat3("local rotation", (float*)&mCamera->transform().localRotation());
   // } ImGui::End();
 }
 
@@ -182,7 +192,7 @@ void FollowCameraOverSholder::onUpdate(float dt) {
     );
   t = t * r;
 
-  mCamera.transform().setlocalTransform(t);
+  mCamera->transform().setlocalTransform(t);
   
 
 }

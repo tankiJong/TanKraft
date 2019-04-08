@@ -1,5 +1,6 @@
 #include "Common.hlsli"
 #include "../SceneRenderer/fullscreen.hlsli"
+#include "Debug.hlsli"
 
 
 struct PSOutput {
@@ -27,5 +28,6 @@ StructuredBuffer<light_info_t> gLights: register(t7);
     "RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), " \
      RootSig_Common  \
 		"DescriptorTable(SRV(t0, numDescriptors = 8, flags = DATA_VOLATILE), visibility = SHADER_VISIBILITY_ALL)," \
-    "StaticSampler(s0, filter = FILTER_ANISOTROPIC, maxAnisotropy = 1, visibility = SHADER_VISIBILITY_PIXEL)," 
+		 DebugDraw_RootSig \
+		"StaticSampler(s0, filter = FILTER_ANISOTROPIC, maxAnisotropy = 1, visibility = SHADER_VISIBILITY_PIXEL)," 
 

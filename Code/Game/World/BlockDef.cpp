@@ -87,7 +87,7 @@ void BlockDef::init() {
 
     gdef.id = def.id();
     gdef.emission = (float)def.emissive() / (float)(UINT8_MAX - 1) * 100;
-    gdef.opaque = def.opaque() ? 1 : 0;
+    gdef.opaque = def.opaque() ? 1.f : 0.f;
     memcpy(gdef.uvs, def.mSpriteUVs.data(), sizeof(gdef.uvs));
   }
 

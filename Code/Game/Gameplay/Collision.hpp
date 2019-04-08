@@ -18,11 +18,13 @@ public:
 class CollisionSphere {
 public:
   CollisionSphere() = default;
-  CollisionSphere(Transform& transform, float radius)
+  CollisionSphere(Transform& transform, float radius, const vec3& offset)
     : target(&transform)
-    , radius(radius) {};
+    , radius(radius)
+    , offset(offset) {};
 
   vec3 center() const;
-  Transform* target;
-  float radius;
+  Transform* target = nullptr;
+  float radius = 0;
+  vec3 offset = vec3::zero;
 };

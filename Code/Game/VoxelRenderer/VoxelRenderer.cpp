@@ -101,8 +101,24 @@ void VoxelRenderer::onRenderFrame(RHIContext& ctx) {
   // or
   // mGraph.setCustomBackBuffer(mTFinal);
 
+  bool debugFrame = false;
+  ImGui::Begin("Debug");
+  {
+    ImGui::Checkbox("debug frame", &debugFrame);
+  }
+  ImGui::End();
 
+  if(debugFrame) {
+    Debug::enableGpuRecord();
+  }
+
+  RHIBuffer::sptr_t buffer = Debug::uavMesh();
+  RHIBuffer::sptr_t counter = Debug::uavMesh()->uavCounter();
+
+  mGraph.setParam<RHIBuffer>(buffer, "DebugBuffer");
+  mGraph.setParam<RHIBuffer>(counter, "DebugBufferCounter");
   bool result = mGraph.execute();
+
   ENSURES(result);
   cleanupFrameData();
   //
@@ -149,7 +165,7 @@ void VoxelRenderer::issueChunk(const Chunk* chunk) {
   mFrameRenderData.emplace_back(ChunkRenderData{chunk->mesh(), mat44::translation(basePosition), chunk});
 }
 
-void VoxelRenderer::raytracing(const Chunk* chunk) {
+void VoxelRenderer::raytracing(const Chunk* /*chunk*/) {
   
 }
 
@@ -319,11 +335,11 @@ void VoxelRenderer::updateFrameConstant(RHIContext&) {
       ImGui::DragFloat("Atmosphere Thickness", &mFrameData.gPlanetAtmosphereThickness, 10, 100, mFrameData.gPlanetRadius);
       ImGui::SliderFloat("Time", &dayaPrecent, 0, 1);
       ImGui::SliderFloat("Sun Power", &mFrameData.gSunPower, 1, 100, "%.1f");
-      ImGui::DragFloat("Rayleigh factor scale", &scaleRayleigh, 0.0000001, 0.0000001, 1, "%.10f");
-      ImGui::DragFloat3("Rayleigh Factor", (float*)&gRayleigh, 0.01, 0, 100, "%.3f");
-      ImGui::DragFloat("Mie scale", &scaleMie, 0.000000001, 0, 1, "%.10f");
-      ImGui::DragFloat3("Mie Factor", (float*)&gMie, 0.01, 0, 100, "%.3f");
-      ImGui::DragFloat2("Scatter Thickness: Raylegigh/Mie", (float*)&mFrameData.gScatterThickness, 1, 10, 10000);
+      ImGui::DragFloat("Rayleigh factor scale", &scaleRayleigh, 0.0000001f, 0.0000001f, 1.f, "%.10f");
+      ImGui::DragFloat3("Rayleigh Factor", (float*)&gRayleigh, 0.01f, 0.f, 100.f, "%.3f");
+      ImGui::DragFloat("Mie scale", &scaleMie, 0.000000001f, 0.f, 1.f, "%.10f");
+      ImGui::DragFloat3("Mie Factor", (float*)&gMie, 0.01f, 0.f, 100.f, "%.3f");
+      ImGui::DragFloat2("Scatter Thickness: Raylegigh/Mie", (float*)&mFrameData.gScatterThickness, 1.f, 10.f, 10000.f);
     ImGui::End();
   }
   mFrameData.gRayleigh = gRayleigh * scaleRayleigh;
@@ -507,6 +523,8 @@ void VoxelRenderer::defineRenderPasses() {
   mGraph.declare<RHIBuffer>("frameConstant");
   mGraph.declare<RHIBuffer>("cameraInfo");   
   mGraph.declare<RHIBuffer>("modelMatrix");
+  mGraph.declare<RHIBuffer>("DebugBuffer");
+  mGraph.declare<RHIBuffer>("DebugBufferCounter");
 
   mGraph.declare<std::vector<ChunkRenderData>>("RenderData");
 
@@ -697,6 +715,8 @@ void VoxelRenderer::defineRenderPasses() {
       context.readSrv(".gPosition"        , 4);
       context.readSrv(".gAO"              , 5);
       context.readSrv(".gDepth"           , 6);
+      context.readWriteUav("DebugBuffer", 100);
+      context.readWriteUav("DebugBufferCounter", 101);
       // context.readSrv(".lightBuffer"       , 7);
       // context.readSrv("skybox"            , 8);
 

@@ -195,7 +195,7 @@ void GameApplication::renderStatisticsOverlay() const {
                   ImGuiWindowFlags_NoNav)) {
 
     ImGui::Text("World Status" "(right-click to change position)");
-    ImGui::TextColored({.3, .5, 1, 1}, "World Time: %.4f", gGameClock->total.second / 86400.f);
+    ImGui::TextColored({.3f, .5f, 1.f, 1.f}, "World Time: %.4f", gGameClock->total.second / 86400.f);
 
     ImGui::Separator();
     
@@ -207,7 +207,7 @@ void GameApplication::renderStatisticsOverlay() const {
       ivec2 chunkCoords = rc.contact.block.chunk->coords();
       std::string seletedBlockInfo = "";
 
-      ImGui::Text("Current Chunk (%s)", chunkCoords.toString());
+      ImGui::Text("Current Chunk (%s)", chunkCoords.toString().c_str());
       ImGui::Text("Block 0x%x(%i, %i, %i)", index, coord.x, coord.y, coord.z);
 
     } else {

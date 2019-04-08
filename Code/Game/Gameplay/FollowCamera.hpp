@@ -13,6 +13,7 @@ enum eCameraMode {
   CAMERA_1_PERSON,
   CAMERA_OVER_SHOULDER,
   CAMERA_FIXED_ANGLE,
+  NUM_CAMERA_MODE,
 };
 
 class FollowCamera {
@@ -23,13 +24,19 @@ public:
   virtual void onUpdate(float dt) = 0;
   virtual ~FollowCamera() = default;
 
-  const Camera& camera() const { return mCamera; }
-  Camera& camera() { return mCamera; }
+  const Camera& camera() const { return *mCamera; }
+  Camera& camera() { return *mCamera; }
+  Entity* target() const { return mTarget; }
   void world(World* w) { mWorld = w; }
   void possessTarget(Entity* target);
+  eCameraMode cameraMode() const { return mCameraMode; }
+
+  FollowCamera& operator=(FollowCamera&& rhs);
+
+  FollowCamera();
 protected:
 
-  Camera mCamera;
+  owner<Camera*> mCamera;
   Entity* mTarget = nullptr;
   World* mWorld = nullptr;
   eCameraMode mCameraMode = CAMERA_UNDEFINED;
@@ -51,6 +58,7 @@ public:
   void addAngularForce(const vec2& force);
 
   vec3 speed() const;
+
 protected:
   vec3 mMoveSpeed;
   vec2 mAngularSpeed;
@@ -68,8 +76,8 @@ public:
   void onUpdate(float dt) override;
 
 protected:
-  float mRotateAroundZ = 180.f;
-  float mRotateAroundY = 0.f;
+  float mRotateAroundZ = -40.f;
+  float mRotateAroundY = 30.f;
   float mDistanceFromTarget = 2.f;
 };
 
@@ -78,6 +86,7 @@ public:
   FollowCameraFixedAngle(Entity* target)
     : FollowCameraOverSholder(target) {
     mCameraMode = CAMERA_FIXED_ANGLE;
+    mDistanceFromTarget = 10.f;
   }
 
   void placeCamera(float rotateY, float rotateZ, float distance) {
