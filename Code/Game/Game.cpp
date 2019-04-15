@@ -23,7 +23,7 @@ void Game::onInit() {
   mPlayer = player;
   mSpectator = debugPlayer;
 
-  player->physicsMode(Entity::PHY_NORMAL);
+  player->physicsMode(Entity::PHY_GHOST);
   mSpectator->physicsMode(Entity::PHY_GHOST);
 
   mCameraController->possessTarget(mPossessPlayer ? mPlayer : mSpectator);
@@ -44,7 +44,8 @@ void Game::onInit() {
 
   mWorld->onInit();
   mSceneRenderer->onLoad(*RHIDevice::get()->defaultRenderContext());
-
+  Chunk::sInvalidChunk.onInit();
+  Chunk::sInvalidChunk.rebuildGpuMetaData();
 }
 
 void Game::onInput() {
@@ -144,7 +145,8 @@ void Game::onInput() {
 void Game::onUpdate() {
   float dt = (float)GetMainClock().frame.second;
 
-  mWorld->onUpdate(mCameraController->camera().transform().position());
+  vec3 playerPosition = mCameraController->camera().transform().position();
+  mWorld->onUpdate(playerPosition);
   updateEntities();
 
   mCameraController->onUpdate(dt);
@@ -152,6 +154,7 @@ void Game::onUpdate() {
   if(mPossessPlayer) {
     mSpectator->transform() =  mPlayer->transform();
   }
+  mSceneRenderer->updatePlayerPosition(playerPosition); 
 }
 
 void Game::onRender() const {

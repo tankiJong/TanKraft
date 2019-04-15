@@ -15,7 +15,7 @@ PSOutput main(PSInput input)
 	float timeInDay = gTime / 86400.f;
 	timeInDay = timeInDay - floor(timeInDay);
 
-	float ambientStrength = input.color.y * (lerp(0.1, 1, -cos(2 * 3.1415926 * timeInDay) * .5f + .5f) + gWorldConstant.x);
+	float ambientStrength = input.color.y * (lerp(1, 1, -cos(2 * 3.1415926 * timeInDay) * .5f + .5f) + gWorldConstant.x);
 	ambientStrength = clamp(ambientStrength, 0, 1.3f);
 	float3 ambientLight = ambientStrength * float3(.8f, .9f, 1.f);
 	ambientLight *= ambientStrength;

@@ -8,7 +8,7 @@ class Player: public Entity {
 public:
   Player();
 
-  void onInput();
+  virtual void onInput();
   void onUpdate() override;
 
 
@@ -18,5 +18,6 @@ protected:
 
 class Spectator: public Player {
 public:
+  virtual void onInput() override;
   void onRender() override {}
 };

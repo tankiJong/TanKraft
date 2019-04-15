@@ -5,6 +5,7 @@
 #include "Engine/Graphics/Model/Mesh.hpp"
 #include "Engine/Renderer/RenderGraph/RenderGraph.hpp"
 #include "Game/World/Chunk.hpp"
+#include "Game/World/GPUVolume.hpp"
 
 class RenderScene;
 class Camera;
@@ -25,13 +26,14 @@ public:
   void onRenderGui(RHIContext& ctx) override;
 
   void issueChunk(const Chunk* chunk);
-
+  void updatePlayerPosition(vec3 playerPosition);
   void setCamera(const Camera& cam) {
     mCamera = &cam;
   };
 
   void setWorld(const World* world) {
     mWorld = world;
+    mWorldVolume.setWorld(world);
   }
 
   void raytracing(const Chunk* chunk);
@@ -92,5 +94,6 @@ protected:
   const World* mWorld = nullptr;
   RenderGraph mGraph;
 
+  GPUVolume mWorldVolume;
   std::vector<ChunkRenderData> mFrameRenderData;
 };

@@ -52,3 +52,8 @@ void Player::onInput() {
 void Player::onUpdate() {
   Entity::onUpdate();
 }
+
+void Spectator::onInput() {
+  Player::onInput();
+  mSpeed = vec3::zero;
+}

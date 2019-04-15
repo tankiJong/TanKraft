@@ -793,7 +793,8 @@ bool Chunk::neighborsLoaded() const {
 }
 
 void Chunk::rebuildGpuMetaData() {
-  mChunkGPUData = Texture3::create(kSizeX, kSizeY, kSizeZ, TEXTURE_FORMAT_RGBA8, RHIResource::BindingFlag::UnorderedAccess, mBlocks.data());
+  mChunkGPUData = Texture3::create(kSizeX, kSizeY, kSizeZ, TEXTURE_FORMAT_R32_UINT, 
+	                RHIResource::BindingFlag::ShaderResource | RHIResource::BindingFlag::UnorderedAccess, mBlocks.data());
 }
 
 bool Chunk::reconstructMesh() {

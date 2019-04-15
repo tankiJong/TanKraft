@@ -65,9 +65,9 @@ namespace std {
 }
 
 class Chunk {
-  static Chunk sInvalidChunk;
   Chunk() = default;
 public:
+  static Chunk sInvalidChunk;
   
   static constexpr BlockIndex kSizeBitX = 4;
   static constexpr BlockIndex kSizeBitY = 4;
@@ -99,6 +99,7 @@ public:
     friend class Chunk;
 
   public:
+    Iterator() = default;
     void step(eNeighbor dir);
     void step(const ChunkCoords& deltaCoords);
     Iterator operator+(const ChunkCoords& deltaCoords) const;
@@ -211,6 +212,9 @@ public:
   static Iterator invalidIter() { return { sInvalidChunk }; }
 
   void resetBlock(BlockIndex index, BlockDef& def);
+
+  const Texture3::sptr_t& gpuVolume() { return mChunkGPUData == nullptr ? sInvalidChunk.mChunkGPUData : mChunkGPUData; }
+  void rebuildGpuMetaData();
 protected:
 
   void addBlock(const BlockIter& block, const vec3& pivot);
@@ -220,7 +224,6 @@ protected:
   void initLights();
   bool neighborsLoaded() const;
 
-  void rebuildGpuMetaData();
 
   std::array<Block, kTotalBlockCount> mBlocks; // 0xffff
   ChunkCoords mCoords;
@@ -232,7 +235,6 @@ protected:
   
   owner<Mesh*> mMesh = nullptr;
   Texture3::sptr_t mChunkGPUData = nullptr;
-  Texture3::sptr_t mChunkShadowVolume = nullptr;
 
   bool mSavePending = false;
   bool mIsDirty = true;

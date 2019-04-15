@@ -9,24 +9,25 @@
 #include "Engine/Core/Time/Clock.hpp"
 #include "Engine/Graphics/Camera.hpp"
 #include "Engine/Renderer/RenderGraph/RenderNodeContext.hpp"
+#include "Engine/Renderer/RenderGraph/RenderNodeBuilder.hpp"
+#include "Engine/Renderer/RenderGraph/RenderPass/BlurPass.hpp"
 
 #include "Engine/Math/MathUtils.hpp"
 #include "Engine/Debug/Draw.hpp"
 #include "Engine/Gui/ImGui.hpp"
+#include "Engine/Input/Input.hpp"
+#include "Engine/Core/Image.hpp"
+#include "Engine/File/FileSystem.hpp"
+
+#include "Game/World/World.hpp"
+#include "Game/Utils/Config.hpp"
+#include "Game/GameCommon.hpp"
 
 #include "VoxelRenderer/DeferredShading_ps.h"
 #include "VoxelRenderer/DeferredShading_vs.h"
 #include "VoxelRenderer/GenGBuffer_ps.h"
 #include "VoxelRenderer/GenGBuffer_vs.h"
 #include "VoxelRenderer/SSAO_cs.h"
-#include "Engine/Renderer/RenderGraph/RenderPass/BlurPass.hpp"
-#include "Engine/Input/Input.hpp"
-#include "Engine/Core/Image.hpp"
-#include "Engine/File/FileSystem.hpp"
-#include "Game/World/World.hpp"
-#include "Game/Utils/Config.hpp"
-#include "Game/GameCommon.hpp"
-#include "Engine/Renderer/RenderGraph/RenderNodeBuilder.hpp"
 
 // DFS TODO: add ConstBuffer class66
 
@@ -89,6 +90,8 @@ void VoxelRenderer::onLoad(RHIContext&) {
 
   mFrameData.gViewDistance.x = Config::kMaxActivateDistance - 100;
   mFrameData.gViewDistance.y = Config::kMaxActivateDistance;
+
+  mWorldVolume.init(16, 16, TEXTURE_FORMAT_R32_UINT);
 }
 
 void VoxelRenderer::onRenderFrame(RHIContext& ctx) {
@@ -163,6 +166,10 @@ void VoxelRenderer::issueChunk(const Chunk* chunk) {
 
   vec3 basePosition = chunk->coords().pivotPosition();
   mFrameRenderData.emplace_back(ChunkRenderData{chunk->mesh(), mat44::translation(basePosition), chunk});
+}
+
+void VoxelRenderer::updatePlayerPosition(vec3 playerPosition) {
+  mWorldVolume.update(playerPosition);
 }
 
 void VoxelRenderer::raytracing(const Chunk* /*chunk*/) {
@@ -822,4 +829,5 @@ DEF_RESOURCE(Program, "Game/Shader/Voxel/SSAO_generate") {
 
   return prog;
 }
+
 //http://blog.tuxedolabs.com/2018/10/17/from-screen-space-to-voxel-space.html

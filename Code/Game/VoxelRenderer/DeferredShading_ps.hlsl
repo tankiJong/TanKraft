@@ -245,7 +245,7 @@ float3 get_incident_light(_in(ray_t) ray)
 
 float3 jodieReinhardTonemap(float3 x){
     const float a = 2.51;
-    const float b = 0.03;
+    const float b = 0.13;
     const float c = 2.43;
     const float d = 0.59;
     const float e = 0.14;
