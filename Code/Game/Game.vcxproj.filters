@@ -94,9 +94,9 @@
     <FxCompile Include="VoxelRenderer\DeferredShading_ps.hlsl" />
     <FxCompile Include="VoxelRenderer\DeferredShading_vs.hlsl" />
     <FxCompile Include="VoxelRenderer\SSAO_cs.hlsl" />
-    <FxCompile Include="VoxelRenderer\Rt_voxelRayTracer_cs.hlsl" />
     <FxCompile Include="World\VolumeUpdate_cs.hlsl" />
     <FxCompile Include="World\GenVolumeMipmap_Detail_cs.hlsl" />
     <FxCompile Include="World\GenVolumeMipmap_Rough_cs.hlsl" />
+    <FxCompile Include="VoxelRenderer\VoxelTraceAO_cs.hlsl" />
   </ItemGroup>
 </Project>

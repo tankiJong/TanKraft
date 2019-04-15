@@ -284,17 +284,6 @@ float3 SkyColor(float height, float3 direction) {
 }
 
 
-float3 depthToWorld(float2 uv, float depth) {
-	float4x4 vp = mul(projection, view);
-	float4x4 inverCamVP = inverse(vp);
-	float2 _uv = float2(uv.x, 1 - uv.y);
-	float3 ndc = float3(_uv * 2.f - 1.f, depth);
-	float4 world = mul(inverCamVP, float4(ndc, 1.f));
-	world = world / world.w;
-
-	return world.xyz;
-}
-
 [RootSignature(DeferredShading_RootSig)]
 PSOutput main(PostProcessingVSOutput input)
 {

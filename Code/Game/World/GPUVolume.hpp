@@ -10,6 +10,8 @@ public:
   static constexpr BlockIndex kTileSizeY = Chunk::kSizeY;
   static constexpr BlockIndex kTileSizeZ = Chunk::kSizeZ;
 
+  GPUVolume() {}
+
   void init(uint tileCountX, uint tileCountY, eTextureFormat format);
   void setWorld(const World* world) { mWorld = world; }
   void update(vec3 playerPosition);

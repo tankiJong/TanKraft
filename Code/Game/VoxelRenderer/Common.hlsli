@@ -105,4 +105,26 @@ float3 GetRandomDirection(inout uint seed, float3 normal, float3 tangent, float3
 }
 
 
+float3 depthToWorld(float2 uv, float depth) {
+	float4x4 vp = mul(projection, view);
+	float4x4 inverCamVP = inverse(vp);
+	float2 _uv = float2(uv.x, 1 - uv.y);
+	float3 ndc = float3(_uv * 2.f - 1.f, depth);
+	float4 world = mul(inverCamVP, float4(ndc, 1.f));
+	world = world / world.w;
+
+	return world.xyz;
+}
+
+float3 depthToView(float2 uv, float depth) {
+	float4x4 inverP = inverse(projection);
+	float2 _uv = float2(uv.x, 1 - uv.y);
+	float3 ndc = float3(_uv * 2.f - 1.f, depth);
+	float4 view = mul(inverP, float4(ndc, 1.f));
+	view = view / view.w;
+
+	return view.xyz;
+}
+
+
 #endif

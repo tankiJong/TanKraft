@@ -1144,7 +1144,7 @@ exit/B %errlev%</Command>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='FaskBreak|x64'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
     </FxCompile>
-    <FxCompile Include="VoxelRenderer\Rt_voxelRayTracer_cs.hlsl">
+    <FxCompile Include="VoxelRenderer\VoxelTraceAO_cs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|x64'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugInline|Win32'">Compute</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='DebugInline|Win32'">4.0</ShaderModel>
