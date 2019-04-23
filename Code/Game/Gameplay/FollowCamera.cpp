@@ -69,8 +69,10 @@ void FollowCamera1Person::onInput() {
 
   if (Input::Get().isKeyDown(MOUSE_MBUTTON)) {
     vec2 deltaMouse = Input::Get().mouseDeltaPosition();
-    addForce(-mCamera->transform().right() * deltaMouse.x / (float)GetMainClock().frame.second);
-    addForce(mCamera->transform().up() * deltaMouse.y / (float)GetMainClock().frame.second);
+    if(deltaMouse.x > deltaMouse.y) deltaMouse.y = 0;
+    if(deltaMouse.y > deltaMouse.x) deltaMouse.x = 0;
+    addForce(-mCamera->transform().up() * deltaMouse.x / (float)GetMainClock().frame.second);
+    addForce(mCamera->transform().right() * deltaMouse.y / (float)GetMainClock().frame.second);
   }
   if(Input::Get().isMouseLocked()) {
     vec2 deltaMouse = Input::Get().mouseDeltaPosition(true);

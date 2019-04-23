@@ -627,7 +627,7 @@ void Chunk::generateBlocks() {
   float noises[kSizeX][kSizeY];
 
   constexpr BlockIndex kWorldSeaLevel = 100;
-  constexpr int kChangeRange = (int(kSizeZ) - int(kWorldSeaLevel)) / 4;
+  constexpr int kChangeRange = (int(kSizeZ) - int(kWorldSeaLevel)) / 3;
 
   vec2 base = mCoords.pivotPosition().xy();
   for(uint i = 0; i < kSizeX; i++) {
@@ -795,6 +795,7 @@ bool Chunk::neighborsLoaded() const {
 void Chunk::rebuildGpuMetaData() {
   mChunkGPUData = Texture3::create(kSizeX, kSizeY, kSizeZ, TEXTURE_FORMAT_R32_UINT, 
 	                RHIResource::BindingFlag::ShaderResource | RHIResource::BindingFlag::UnorderedAccess, mBlocks.data());
+  setName(*mChunkGPUData, make_wstring(Stringf("C(%d, %d)", mCoords.x, mCoords.y)).c_str());
 }
 
 bool Chunk::reconstructMesh() {

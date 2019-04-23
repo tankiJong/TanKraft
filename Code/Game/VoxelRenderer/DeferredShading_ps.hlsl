@@ -289,7 +289,7 @@ PSOutput main(PostProcessingVSOutput input)
 {
 
 	PSOutput output;
-	
+	// input.tex.y = 1-input.tex.y;
 	float4 color = gTexAlbedo.Sample(gSampler, input.tex);
 	color = pow(color, 2.2f);
 	// float4 color = float4(1, 1, 1, 1);
@@ -380,7 +380,7 @@ PSOutput main(PostProcessingVSOutput input)
 
 	float ao = gTexAO.Sample(gSampler, input.tex).x;
 	finalColor += color.xyz * ao;
-	ao = clamp(0, 1, ao + lerp(.5f, 0.f, ambientStrength));
+	// ao = clamp(0, 1, ao + lerp(.5f, 0.f, ambientStrength));
 
 	finalColor = saturate(finalColor);
 
@@ -398,6 +398,6 @@ PSOutput main(PostProcessingVSOutput input)
 
 	output.color = float4( finalColor, 1 )  * factor
 	 								+ skyScatter * (1 - factor);
-
+	output.color = float4(ao.xxx, 1.f);
 	return output;
 }

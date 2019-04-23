@@ -15,6 +15,7 @@
 #include "Engine/Physics/contact3.hpp"
 #include "Engine/Debug/Log.hpp"
 #include "Engine/Math/Noise/SmoothNoise.hpp"
+#include <stdlib.h>
 
 void World::onInit() {
 
@@ -103,6 +104,11 @@ void World::onUpdate(const vec3& viewPosition) {
 }
 
 void World::onRender(VoxelRenderer& renderer) const {
+
+  //for(aabb3& cube: mDebugRayCubes) {
+  //  Debug::drawCube(cube, mat44::identity, true, 0);
+  //}
+
   for(auto& [coords, chunk]: mActiveChunks) {
     if(chunk->invalid()) continue;
     renderer.issueChunk(chunk);
@@ -191,13 +197,16 @@ Chunk* World::findChunk(const vec3& worldPosition) const {
 }
 
 raycast_result_t World::raycast(const vec3& start, const vec3& dir, float maxDist) const {
-  constexpr float kRaycastStepSize = 0.01f;
-  raycast_result_t result;
+  mDebugRayCubes.clear();
 
-  result.start = start;
-  result.end = start + dir * maxDist;
-  result.dir = dir;
-  result.maxDist = maxDist;
+  ray_t ray;
+  ray.direction = dir;
+  ray.origin = start;
+  ray.mint = 0;
+  ray.maxt = maxDist;
+
+  raycast_result_t result;
+  result.ray = ray;
 
   Chunk* chunk = findChunk(start);
 
@@ -208,48 +217,166 @@ raycast_result_t World::raycast(const vec3& start, const vec3& dir, float maxDis
   // found chunk, start ray casting
 
   Chunk::BlockIter prev = chunk->blockIter(start);
-  // hit start block
-  if(Input::Get().isKeyJustDown('Z')) {
-    Debug::drawCube(prev.bounds(), mat44::identity, true);
-  }
-  if(prev->opaque()) {
-    result.contact = { start, -dir, 0, 0, prev };
-    return result;
-  }
 
-  aabb3 prevBounds = prev.bounds();
-  for(float dist = kRaycastStepSize; dist <= maxDist; dist += kRaycastStepSize) {
+  auto stepx = signbit(dir.x) ? &Chunk::BlockIter::stepNegX : &Chunk::BlockIter::stepPosX;
+  auto stepy = signbit(dir.y) ? &Chunk::BlockIter::stepNegY :  &Chunk::BlockIter::stepPosY;
+  auto stepz = signbit(dir.z) ? &Chunk::BlockIter::stepNegZ :  &Chunk::BlockIter::stepPosZ;
 
-    vec3 currentPos = start + dist * dir;
+  vec3 signs = {
+    signbit(dir.x) ? -1.f : 1.f,
+    signbit(dir.y) ? -1.f : 1.f,
+    signbit(dir.z) ? -1.f : 1.f
+  };
 
-    if(prevBounds.contains(currentPos)) continue;
 
-    if(!chunk->bounds().contains(currentPos)) {
-      chunk = findChunk(currentPos);
-      // GUARANTEE_RECOVERABLE(chunk->valid(), "got invalid chunk");
+  float dx = (floor(ray.origin.x + (signs.x > 0 ? 1.f : 0.f)) - ray.origin.x) / dir.x;
+  float dy = (floor(ray.origin.y + (signs.y > 0 ? 1.f : 0.f)) - ray.origin.y) / dir.y;
+  float dz = (floor(ray.origin.z + (signs.z > 0 ? 1.f : 0.f)) - ray.origin.z) / dir.z;
+  //float dx, dy, dz;
+  //if(signs.x > 0) {
+  //  dx = (floor(ray.origin.x + 1.f) - ray.origin.x) / dir.x;
+  //} else {
+  //  dx = (floor(ray.origin.x) - ray.origin.x) / dir.x;
+  //}
+
+  //if(signs.y > 0) {
+  //  dy = (floor(ray.origin.y + 1.f) - ray.origin.y) / dir.y;
+  //} else {
+  //  dy = (floor(ray.origin.y) - ray.origin.y) / dir.y;
+  //}
+
+  //if(signs.z > 0) {
+  //  dz = (floor(ray.origin.z + 1.f) - ray.origin.z) / dir.z;
+  //} else {
+  //  dz = (floor(ray.origin.z) - ray.origin.z) / dir.z;
+  //}
+  
+  Debug::drawText2(Stringf("dx:%f dy:%f dz:%f", dx, dy, dz), 30, {300, 12}, 0);
+  float dtx = dir.x != 0 ? 1.f / abs(dir.x) : ray.maxt; 
+  float dty = dir.y != 0 ? 1.f / abs(dir.y) : ray.maxt; 
+  float dtz = dir.z != 0 ? 1.f / abs(dir.z) : ray.maxt;
+  //float t = ray.mint;
+  vec3 norm;
+  while((dx <= ray.maxt || dy <= ray.maxt || dz <= ray.maxt) && prev.valid()) {
+    mDebugRayCubes.push_back(prev.bounds());
+
+    if(dx <= dy && dx <= dz) {
+      (prev.*stepx)();
+      norm = {-signs.x, 0, 0};
+    } else if(dy <= dx && dy <= dz) {
+      (prev.*stepy)();
+      norm = {0, -signs.y, 0};
+    } else {
+      ASSERT_OR_DIE(dz <= dx && dz <= dy, "assertion failed");
+      (prev.*stepz)();
+      norm = {0, 0, -signs.z};
     }
 
-    Chunk::BlockIter next = chunk->blockIter(currentPos);
-    aabb3 bounds = next.bounds();
+    if(prev->opaque()) {
+      float t = std::min(dx, std::min(dy, dz));
+      result.contact.block = prev;
+      result.contact.position = ray.at(t);
+      result.contact.distance = result.contact.position.distance(ray.start());
+      result.contact.fraction = t / (ray.maxt - ray.mint);
+      result.contact.normal = norm;
 
-    if(next->opaque()) {
-      ray3 ray {start, dir};
-      contact3 c = ray.intersect(bounds);
-
-      result.contact = { 
-        c.position, c.normal, 
-        dist / maxDist, dist, next };
       return result;
     }
 
-    prev = next;
-    prevBounds = bounds;
+    if(dx <= dy && dx <= dz) {
+      dx += dtx;
+    } else if(dy <= dx && dy <= dz) {
+      dy += dty;
+    } else {
+      dz += dtz;
+    }
 
+ /*   if(dx < dy) {
+      if(dx < dz) {
+        (prev.*stepx)();
+        dx = dx + dtx;
+        t = dx;
+      } else {
+        (prev.*stepz)();
+        dz = dz + dtz;
+        t = dy;
+      }
+    } else {
+      if(dy < dz) {
+        (prev.*stepy)();
+        dy = dy + dty;
+        t = dy;
+      } else {
+        (prev.*stepz)();
+        dz = dz + dtz;
+        t = dz;
+      }
+    }*/
   }
 
-  // else missed
   return result;
 }
+
+//
+//raycast_result_t World::raycast(const vec3& start, const vec3& dir, float maxDist) const {
+//  constexpr float kRaycastStepSize = 0.01f;
+//  raycast_result_t result;
+//
+//  result.ray.origin = start;
+//  result.ray.direction = dir;
+//  result.ray.maxt = maxDist;
+//  result.ray.mint = 0;
+//  Chunk* chunk = findChunk(start);
+//
+//  // fail to find the chunk
+//
+//  if(chunk->invalid()) return result;
+//
+//  // found chunk, start ray casting
+//
+//  Chunk::BlockIter prev = chunk->blockIter(start);
+//  // hit start block
+//  if(Input::Get().isKeyJustDown('Z')) {
+//    Debug::drawCube(prev.bounds(), mat44::identity, true);
+//  }
+//  if(prev->opaque()) {
+//    result.contact = { start, -dir, 0, 0, prev };
+//    return result;
+//  }
+//
+//  aabb3 prevBounds = prev.bounds();
+//  for(float dist = result.ray.mint + kRaycastStepSize; dist <= result.ray.maxt; dist += kRaycastStepSize) {
+//
+//    vec3 currentPos = start + dist * dir;
+//
+//    if(prevBounds.contains(currentPos)) continue;
+//
+//    if(!chunk->bounds().contains(currentPos)) {
+//      chunk = findChunk(currentPos);
+//      // GUARANTEE_RECOVERABLE(chunk->valid(), "got invalid chunk");
+//    }
+//
+//    Chunk::BlockIter next = chunk->blockIter(currentPos);
+//    aabb3 bounds = next.bounds();
+//
+//    if(next->opaque()) {
+//      ray3 ray {start, dir};
+//      contact3 c = ray.intersect(bounds);
+//
+//      result.contact = { 
+//        c.position, c.normal, 
+//        dist / maxDist, dist, next };
+//      return result;
+//    }
+//
+//    prev = next;
+//    prevBounds = bounds;
+//
+//  }
+//
+//  // else missed
+//  return result;
+//}
 
 void World::submitDirtyBlock(const Chunk::BlockIter& block) {
   mLightDirtyList.push_back(block);

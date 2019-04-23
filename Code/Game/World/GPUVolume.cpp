@@ -42,7 +42,7 @@ void GPUVolume::update(vec3 playerPosition) {
 	mPlayerPosition = playerPosition;
 
 	Chunk* centerChunk = mWorld->findChunk(playerPosition);
-	if(!centerChunk->valid()) return;
+	if(!centerChunk->renderable()) return;
 	uvec3 volumeSize;
 	{
 		const Texture3::sptr_t& chunkVolume = centerChunk->gpuVolume();
@@ -58,13 +58,14 @@ void GPUVolume::update(vec3 playerPosition) {
 
 	std::vector<Chunk::Iterator> iterX;
 	iterX.resize(mTileCountX);
+	iterX[mPlayerTileIndex.x] = centerChunk->iterator();
 
+	ChunkCoords coords[16][16];
 	// -x
 	{
 		uint d = 1;
 		Chunk::Iterator next = centerChunk->iterator();
-		iterX[mPlayerTileIndex.x] = next;
-		while(mPlayerTileIndex.x - d < mPlayerTileIndex.x) {
+		while(mPlayerTileIndex.x - d <= mPlayerTileIndex.x) {
 			next.step(Chunk::NEIGHBOR_NEG_X);
 			iterX[mPlayerTileIndex.x - d] = next;
 			d++;
@@ -75,7 +76,6 @@ void GPUVolume::update(vec3 playerPosition) {
 	{
 		uint d = 1;
 		Chunk::Iterator next = centerChunk->iterator();
-		iterX[mPlayerTileIndex.x] = next;
 		while(mPlayerTileIndex.x + d < mTileCountX) {
 			next.step(Chunk::NEIGHBOR_POS_X);
 			iterX[mPlayerTileIndex.x + d] = next;
@@ -86,23 +86,15 @@ void GPUVolume::update(vec3 playerPosition) {
 	for(size_t i = 0; i < iterX.size(); i++) {
 		// -y, 0
 		Chunk::Iterator iter = iterX[i];
-		if(!iter->valid()) continue;
+		if(!iter->renderable()) continue;
 		{
 			uint d = 0;
 			Chunk::Iterator next = iter;
 			while(mPlayerTileIndex.y - d <= mPlayerTileIndex.y) {
-				next.step(Chunk::NEIGHBOR_NEG_Y);
+				if(!next->renderable()) break;
 				ctx->transitionBarrier(next->gpuVolume().get(), RHIResource::State::ShaderResource);
-				inst->setSrv(*next->gpuVolume()->srv(0, 1), i + mTileCountX * (mPlayerTileIndex.y - d));
-
-				//if(next.valid() && currentCoords != next->coords()) {
-				//	currentCoords = next->coords();
-				//	RHIDevice::get()
-				//				->defaultRenderContext()
-				//				->copyTextureRegion(
-				//					mVolume.get(), 0, voxelIndexOffset(i, mPlayerTileIndex.y - d), 
-				//					next->gpuVolume().get(), 0, {0, 0, 0}, volumeSize);
-				//}
+				inst->setSrv(*next->gpuVolume()->srv(0, 1), volumeIndex(i, mPlayerTileIndex.y - d));
+				next.step(Chunk::NEIGHBOR_NEG_Y);
 				d++;
 			}
 		}
@@ -110,18 +102,12 @@ void GPUVolume::update(vec3 playerPosition) {
 		{
 			uint d = 1;
 			Chunk::Iterator next = iter;
+			next.step(Chunk::NEIGHBOR_POS_Y);
 			while(mPlayerTileIndex.y + d < mTileCountY) {
-				next.step(Chunk::NEIGHBOR_POS_Y);
+				if(!next->renderable()) break;
 				ctx->transitionBarrier(next->gpuVolume().get(), RHIResource::State::ShaderResource);
-				inst->setSrv(*next->gpuVolume()->srv(0, 1), i + mTileCountX * (mPlayerTileIndex.y + d));
-				//if(next.valid() && currentCoords != next->coords()) {
-				//	currentCoords = next->coords();
-				//	RHIDevice::get()
-				//				->defaultRenderContext()
-				//				->copyTextureRegion(
-				//					mVolume.get(), 0, voxelIndexOffset(i, mPlayerTileIndex.y + d), 
-				//					next->gpuVolume().get(), 0, {0, 0, 0}, volumeSize);
-				//}
+				inst->setSrv(*next->gpuVolume()->srv(0, 1), volumeIndex(i, mPlayerTileIndex.y + d));
+				next.step(Chunk::NEIGHBOR_POS_Y);
 				d++;
 			}
 		}
@@ -137,8 +123,6 @@ void GPUVolume::update(vec3 playerPosition) {
 	ctx->dispatch(16, 16, 1);
 
 	updateSubVolumeAndMipmapsDetail();
-
-
 	updateSubVolumeAndMipmapsRough();
 }
 
@@ -147,6 +131,10 @@ uvec3 GPUVolume::voxelIndexOffset(uint tileIndexX, uint tileIndexY) {
 		BAD_CODE_PATH();
 	}
 	return { kTileSizeX * tileIndexX, kTileSizeY * tileIndexY, 0 };
+}
+
+uint GPUVolume::volumeIndex(uint x, uint y) const {
+	return y * mTileCountX + x;
 }
 
 void GPUVolume::updateSubVolumeAndMipmapsDetail() const {

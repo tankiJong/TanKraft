@@ -38,7 +38,7 @@ void main( uint3 localId : SV_GroupThreadID, uint3 groupId: SV_GroupId )
 	}
 	// uVisibility[0][globalId] = block.opaque();
 
-	// clear 1 ~ 2
+	// clear 1 ~ 3
 	{
 		[unroll]
 		for(uint i = 0; i < 3; i++) {
@@ -67,7 +67,7 @@ void main( uint3 localId : SV_GroupThreadID, uint3 groupId: SV_GroupId )
 		for(uint i = 1; i < 3; i++) {
 			if(all((globalId >> i << i) == globalId)) {
 				uint totalVisibility = visibility[i][toIndex(localId >> i, 8 >> i)];
-				atmoicAddU8(uVisibility[i], globalId >> i, totalVisibility >> bitShift);
+				atmoicAddU8(uVisibility[i], globalId >> i, clamp(totalVisibility, 0, 1));
 			}
 			bitShift = bitShift + 3;
 		}

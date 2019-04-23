@@ -45,7 +45,7 @@ void Game::onInit() {
   mWorld->onInit();
   mSceneRenderer->onLoad(*RHIDevice::get()->defaultRenderContext());
   Chunk::sInvalidChunk.onInit();
-  Chunk::sInvalidChunk.rebuildGpuMetaData();
+  //Chunk::sInvalidChunk.rebuildGpuMetaData();
 }
 
 void Game::onInput() {
@@ -216,15 +216,16 @@ void Game::onRender() const {
   if(!mEnableRaycast) {
     Debug::setDepth(Debug::eDebugDrawDepthMode::DEBUG_DEPTH_DISABLE);
     if(mPlayerRaycast.impacted()) {
-      Debug::drawLine(mPlayerRaycast.start, mPlayerRaycast.end,
+      Debug::drawLine(mPlayerRaycast.ray.start(), mPlayerRaycast.ray.end(),
                       1, 0, Rgba::gray, Rgba(50, 50, 50));
       Debug::drawPoint(mPlayerRaycast.contact.position, 0.2f, 0, Rgba(128, 0, 0));
+      Debug::drawLine(mPlayerRaycast.contact.position, mPlayerRaycast.contact.normal * .5f+ mPlayerRaycast.contact.position, 1, 0, Rgba::red, Rgba::red);
       Debug::setDepth(Debug::eDebugDrawDepthMode::DEBUG_DEPTH_ENABLE);
-      Debug::drawLine(mPlayerRaycast.start, mPlayerRaycast.contact.position,
+      Debug::drawLine(mPlayerRaycast.ray.start(), mPlayerRaycast.contact.position,
                       1, 0, Rgba::red, Rgba::white);
       Debug::drawPoint(mPlayerRaycast.contact.position, 0.2f, 0, Rgba::red);
     } else {
-      Debug::drawLine(mPlayerRaycast.start, mPlayerRaycast.end,
+      Debug::drawLine(mPlayerRaycast.ray.start(), mPlayerRaycast.ray.end(),
                       1, 0, Rgba::green, Rgba::green);
     }
 
@@ -235,9 +236,9 @@ void Game::onRender() const {
   Debug::drawBasis(mCameraController->camera().transform().position() + mCameraController->camera().transform().right(),
                    vec3::right * .05f, vec3::up * .05f, vec3::forward * .05f, 0);
 
-  for(Entity* e: mEntities) {
-    e->onRender();
-  }
+  //for(Entity* e: mEntities) {
+  //  e->onRender();
+  //}
 
 
   switch(mPlayer->physicsMode()) { 

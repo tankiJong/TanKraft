@@ -22,7 +22,7 @@ PSOutput main(PSInput input)
 
 	// ambientLight = 1.f.xxx;
 
-	output.color = texColor * float4(max(indoorLight, ambientLight), 1.f);
+	output.color = texColor;
 	output.normal = float4(input.normal * .5f + .5f, 1.f);
 	output.tangent = float4(input.tangent * .5f + .5f, 1.f);
 

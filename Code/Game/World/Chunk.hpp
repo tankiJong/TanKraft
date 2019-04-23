@@ -208,7 +208,7 @@ public:
 
   bool valid() const;
   bool invalid() const { return !valid(); }
-
+  bool renderable() const { return mMesh != nullptr; }
   static Iterator invalidIter() { return { sInvalidChunk }; }
 
   void resetBlock(BlockIndex index, BlockDef& def);
@@ -226,7 +226,7 @@ protected:
 
 
   std::array<Block, kTotalBlockCount> mBlocks; // 0xffff
-  ChunkCoords mCoords;
+  ChunkCoords mCoords = {~int(0), ~int(0)};
   std::array<Chunk*, NUM_NEIGHBOR> mNeighbors 
     { &sInvalidChunk, &sInvalidChunk, &sInvalidChunk, &sInvalidChunk, };
   Mesher mMesher;

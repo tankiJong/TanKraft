@@ -18,12 +18,12 @@ void Entity::onUpdate() {
   }
 
   float dt = (float)GetMainClock().frame.second;
-  mSpeed += acce * dt;
+  mSpeed += mSpeedScale * acce * dt;
 
   float len = mSpeed.xy().magnitude();
   if(!equal(len, 0)) {
     len = clamp(len, 0.f, kMaxSpeed);
-    mSpeed = vec3{ mSpeed.xy().normalized() * len, mSpeed.z };
+    mSpeed = mSpeedScale * vec3{ mSpeed.xy().normalized() * len, mSpeed.z };
   }
 
   vec3 ds = mSpeed * dt;

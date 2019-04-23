@@ -46,5 +46,5 @@ protected:
 
   // for debug
   bool mEnableRaycast = true;
-  bool mPossessPlayer = true;
+  bool mPossessPlayer = false;
 };

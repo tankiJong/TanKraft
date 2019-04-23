@@ -31,6 +31,6 @@ void main( uint3 localId : SV_GroupThreadID, uint3 groupId: SV_GroupId )
 	GroupMemoryBarrierWithGroupSync();
 
 	if(all(localId == 0u.xxx)) {
-		uVisibility[1][groupId] = total >> 3;
+		uVisibility[1][groupId] = clamp(total, 0, 1);
 	}
 }

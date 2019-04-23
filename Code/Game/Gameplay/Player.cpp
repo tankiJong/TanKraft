@@ -32,7 +32,7 @@ void Player::onInput() {
   }
 
   {
-    if(Input::Get().isKeyJustDown(KEYBOARD_SPACE)) {
+    if(mPhysicsMode == PHY_NORMAL && Input::Get().isKeyJustDown(KEYBOARD_SPACE)) {
       mSpeed.z += 10.f;
     }
   }
@@ -56,4 +56,6 @@ void Player::onUpdate() {
 void Spectator::onInput() {
   Player::onInput();
   mSpeed = vec3::zero;
+
+  mWillpower *= Input::Get().isKeyDown(KEYBOARD_SHIFT) ? 10.f : 1.f;
 }

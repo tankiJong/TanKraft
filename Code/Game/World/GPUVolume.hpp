@@ -23,7 +23,7 @@ protected:
 
   uvec3 voxelIndexOffset(uint tileIndexX, uint tileIndexY);
   uvec3 voxelIndexOffset(uvec2 tileIndex) { return voxelIndexOffset(tileIndex.x, tileIndex.y); }
-
+  uint volumeIndex(uint x ,uint y) const;
   void updateSubVolumeAndMipmapsDetail() const;
   void updateSubVolumeAndMipmapsRough() const;
   const World* mWorld = nullptr;

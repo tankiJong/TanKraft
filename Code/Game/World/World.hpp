@@ -10,6 +10,17 @@
 class Chunk;
 class VoxelRenderer;
 
+struct ray_t {
+  vec3 origin;
+  vec3 direction;
+  float mint;
+  float maxt;
+
+  vec3 start() const { return origin + mint * direction; }
+  vec3 end() const { return origin + maxt * direction; }
+  vec3 at(float t) { return origin + direction * t; }
+};
+
 struct raycast_result_t {
   struct contact_t {
     vec3 position           = vec3::zero;
@@ -19,10 +30,7 @@ struct raycast_result_t {
     Chunk::BlockIter block  = Chunk::BlockIter{ *Chunk::invalidIter().chunk(), 0 };
   };
 
-  vec3 start        = vec3::zero;
-  vec3 end          = vec3::zero;
-  vec3 dir          = vec3::zero;
-  float maxDist     = 0;
+  ray_t ray;
   contact_t contact;      
 
   bool impacted() const { return contact.fraction < 1; }
@@ -73,7 +81,7 @@ protected:
   std::unordered_map<ChunkCoords, Chunk*> mActiveChunks;
 
   std::deque<Chunk::BlockIter> mLightDirtyList;
-
+  mutable std::vector<aabb3> mDebugRayCubes;
   RingBuffer mWeatherNoiseSample;
   RingBuffer mFlameNoiseSample;
 

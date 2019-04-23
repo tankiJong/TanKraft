@@ -31,32 +31,16 @@ Block unpack(uint bf) {
 	return block;
 }
 
-uint readU8(in RWTexture3D<uint> tex, in uint3 coords) {
+uint readU8(in Texture3D<uint> tex, in uint3 coords, in uint mip) {
 	// since values are 4 packed together, the x dim is packed together
-	uint offset = coords.x & 0x3;
+	uint offset = (coords.x & 0x3) * 8;
 	coords.x = coords.x >> 2;
-	uint raw4 = tex[coords];
-
-
-	uint val = raw4 >> (offset * 8);
+	uint raw4 = tex.Load(uint4(coords, mip));;
+	uint val = raw4 >> offset;
 	val = offset & 0xff;
-
 	return val;
 }
 
-void writeU8(in RWTexture3D<uint> tex, in uint3 coords, uint val) {
-	coords.x = coords.x >> 2;
-	uint raw4 = tex[coords];
-	
-	uint offset = (coords.x & 0x3) * 8;
-
-	uint mask = 0xff << offset;
-	val = (val & 0xff) << offset;
-	raw4 = raw4 & (~mask);
-	raw4 = raw4 | val;
-
-	tex[coords] = raw4;
-}
 
 void atmoicAddU8(in RWTexture3D<uint> tex, in uint3 coords, uint val) {
 	uint offset = (coords.x & 0x3) * 8;

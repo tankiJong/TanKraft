@@ -31,7 +31,7 @@ public:
 
   static constexpr float kAccelerationScale = 50.f;
   static constexpr float kMaxAcceleration = 100.f;
-  static constexpr float kMaxSpeed = 5.f;
+  static constexpr float kMaxSpeed = 10.f;
 
 protected:
   void addWillpower(const vec3& power);
@@ -45,4 +45,6 @@ protected:
   vec3 mSpeed;
 
   vec3 mWillpower;
+
+  float mSpeedScale = 1.f;
 };

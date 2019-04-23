@@ -28,6 +28,7 @@
 #include "VoxelRenderer/GenGBuffer_ps.h"
 #include "VoxelRenderer/GenGBuffer_vs.h"
 #include "VoxelRenderer/SSAO_cs.h"
+#include "VoxelRenderer/VoxelTraceAO_cs.h"
 
 // DFS TODO: add ConstBuffer class66
 
@@ -85,13 +86,13 @@ void VoxelRenderer::onLoad(RHIContext&) {
   NAME_RHIRES(mTLights);
 
   // constructFrameMesh();
-  defineRenderPasses();
-
-
   mFrameData.gViewDistance.x = Config::kMaxActivateDistance - 100;
   mFrameData.gViewDistance.y = Config::kMaxActivateDistance;
 
   mWorldVolume.init(16, 16, TEXTURE_FORMAT_R32_UINT);
+
+
+  defineRenderPasses();
 }
 
 void VoxelRenderer::onRenderFrame(RHIContext& ctx) {
@@ -105,11 +106,15 @@ void VoxelRenderer::onRenderFrame(RHIContext& ctx) {
   // mGraph.setCustomBackBuffer(mTFinal);
 
   bool debugFrame = false;
+  if(Input::Get().isKeyDown('H')) {
+    debugFrame = true;
+  }
   ImGui::Begin("Debug");
   {
     ImGui::Checkbox("debug frame", &debugFrame);
   }
   ImGui::End();
+
 
   if(debugFrame) {
     Debug::enableGpuRecord();
@@ -366,164 +371,6 @@ void VoxelRenderer::updateViewConstant(RHIContext& ctx) {
 }
 
 void VoxelRenderer::defineRenderPasses() {
-  // auto& genBufferPass = mGraph.defineNode("G-Buffer",[&](RenderNodeContext& builder) {
-  //    
-  //   S<const Program> prog = Resource<Program>::get("Game/Shader/Voxel/GenGBuffer");
-  //   builder.reset(prog);
-  //
-  //   builder.readCbv("frame-data", mCFrameData, 0);
-  //   builder.readCbv("camera-mat", mCCamera, 1);
-  //   builder.readCbv("model-mat", mCModel, 2);
-  //
-  //   auto albedo = Resource<Texture2>::get("/Data/Images/Terrain_32x32.png");
-  //
-  //   builder.readSrv("albedo-tex", *albedo->srv(0, 6), 0);
-  //
-  //   builder.writeRtv("g-albedo", mGAlbedo, 0);
-  //   builder.writeRtv("g-normal", mGNormal, 1);
-  //   builder.writeRtv("g-tangent", mGTangent, 2);
-  //   builder.writeRtv("g-bitangent", mGBiTangent, 3);
-  //   builder.writeRtv("g-position", mGPosition, 4);
-  //
-  //   builder.writeDsv("g-depth", mGDepth);
-  //
-  //   return [&](RHIContext& ctx) {
-  //     for(auto& renderData: mFrameRenderData) {
-  //       mCModel->updateData(mat44::identity);
-  //       // foreach( auto mesh: mScene.meshes() ) 
-  //       renderData.mesh->bindForContext(ctx);
-  //       for(const draw_instr_t& instr: renderData.mesh->instructions()) {
-  //         ctx.setPrimitiveTopology(instr.prim);
-  //         if(instr.useIndices) {
-  //           ctx.drawIndexed(0, instr.startIndex, instr.elementCount);
-  //         } else {
-  //           ctx.draw(instr.startIndex, instr.elementCount);
-  //         }
-  //       }
-  //     }
-  //   };
-  // });
-  //
-  // auto& ssaoPass = mGraph.defineNode("ssao-generate", [&](RenderNodeContext& builder) {
-  //
-  //   S<const Program> prog = Resource<Program>::get("Game/Shader/Voxel/SSAO_generate");
-  //   builder.reset(prog, true);
-  //   
-  //   builder.readCbv("frame-data", mCFrameData, 0);
-  //   builder.readCbv("camera-mat", mCCamera, 1);
-  //   builder.readCbv("model-mat", mCModel, 2);
-  //
-  //   // builder.readSrv("g-albedo", mGAlbedo, 0);
-  //   builder.readSrv("g-normal", mGNormal, 1);
-  //   builder.readSrv("g-tangent", mGTangent, 2);
-  //   builder.readSrv("g-bitangent", mGBiTangent, 3);
-  //   builder.readSrv("g-position", mGPosition, 4);
-  //   builder.readSrv("g-depth", mGDepth, 5);
-  //
-  //   builder.readWriteUav("g-texAO", mTexAO, 0);
-  //
-  //   return [&](RHIContext& ctx) {
-  //     if(Input::Get().isKeyDown('N')) return;
-  //     auto size = Window::Get()->bounds().size();
-  //
-  //     uint width = (uint)size.x;
-  //     uint height = (uint)size.y;
-  //     ctx.dispatch( width / 16 + 1, height / 16 + 1, 1);
-  //   };
-  // });
-  //
-  // auto& ssaoBlurPassV = mGraph.createNode<BlurPass>("ssao-blur-v", mTexAO, true);
-  // auto& ssaoBlurPassH = mGraph.createNode<BlurPass>("ssao-blur-h", mTexAO, false);
-  //
-  // auto& deferredShadingPass = mGraph.defineNode("DeferredShading", [&](RenderNodeContext& builder) {
-  //
-  //   S<const Program> prog = Resource<Program>::get("Game/Shader/Voxel/DeferredShading");
-  //   builder.reset(prog);
-  //   
-  //   builder.readCbv("frame-data", mCFrameData, 0);
-  //   builder.readCbv("camera-mat", mCCamera, 1);
-  //   builder.readCbv("model-mat", mCModel, 2);
-  //   builder.writeRtv("final-image", mTFinal, 0);
-  //
-  //   auto skybox = Resource<TextureCube>::get("/Data/Images/skybox_texture.cube.jpg");
-  //
-  //   builder.readSrv("g-albedo", mGAlbedo, 0);
-  //   builder.readSrv("g-normal", mGNormal, 1);
-  //   builder.readSrv("g-tangent", mGTangent, 2);
-  //   builder.readSrv("g-bitangent", mGBiTangent, 3);
-  //   builder.readSrv("g-position", mGPosition, 4);
-  //   builder.readSrv("g-texAO", mTexAO, 5);
-  //   builder.readSrv("g-depth", mGDepth, 6);
-  //   builder.readSrv("g-lights", mTLights, 7);
-  //   builder.readSrv("tex-sky", skybox, 8);
-  //
-  //   return [&](RHIContext& ctx) {
-  //     ctx.draw(0, 3);
-  //     ctx.copyResource(*mGDepth, *RHIDevice::get()->depthBuffer());
-  //   };
-  // });
-  //
-  // auto& debugLightPass = mGraph.defineNode("Debug:Light", [&](RenderNodeContext& builder) {
-  //   auto prog = Resource<Program>::get("internal/Shader/debug/always");
-  //   builder.reset(prog);
-  //
-  //   RHIBuffer::sptr_t tintBuffer = RHIBuffer::create(sizeof(vec4), RHIResource::BindingFlag::ConstantBuffer, RHIBuffer::CPUAccess::Write, &vec4::one);
-  //
-  //   builder.readCbv("camera-mat", mCCamera, 1);
-  //   builder.readCbv("tint-buffer", tintBuffer, 6);
-  //
-  //   builder.writeRtv("final-image", mTFinal, 0);
-  //
-  //   return [&](RHIContext& ctx) {
-  //     Mesh* mesh = mWorld->aquireDebugLightDirtyMesh();
-  //     if(!mesh) return;
-  //     mesh->bindForContext(ctx);
-  //     for(const draw_instr_t& instr: mesh->instructions()) {
-  //       ctx.setPrimitiveTopology(instr.prim);
-  //       if(instr.useIndices) {
-  //         ctx.drawIndexed(0, instr.startIndex, instr.elementCount);
-  //       } else {
-  //         ctx.draw(instr.startIndex, instr.elementCount);
-  //       }
-  //     }
-  //
-  //     SAFE_DELETE(mesh);
-  //   };
-  // });
-  // // this is not optional, consider case like: a->pass1->a, a->pass2->a, a->pass2->a, you cannot figure out the sequence.
-  // // mGraph.depend(genBufferPass, ssaoPass);
-  // // mGraph.depend(genBufferPass, deferredShadingPass);
-  // mGraph.depend(ssaoBlurPassV, ssaoBlurPassH);
-  // mGraph.depend(ssaoBlurPassH, deferredShadingPass);
-  // mGraph.depend(deferredShadingPass, debugLightPass);
-  //
-  // // another way to go with is specify dependencies among resources, which gives the freedom to name res differently among nodes.
-  // mGraph.connect(genBufferPass, "g-albedo", deferredShadingPass, "g-albedo");
-  // mGraph.connect(genBufferPass, "g-normal", deferredShadingPass, "g-normal");
-  // mGraph.connect(genBufferPass, "g-tangent", deferredShadingPass, "g-tangent");
-  // mGraph.connect(genBufferPass, "g-bitangent", deferredShadingPass, "g-bitangent");
-  // mGraph.connect(genBufferPass, "g-position", deferredShadingPass, "g-position");
-  // mGraph.connect(genBufferPass, "g-depth", deferredShadingPass, "g-depth");
-  //
-  // mGraph.connect(genBufferPass, "g-normal", ssaoPass, "g-normal");
-  // mGraph.connect(genBufferPass, "g-tangent", ssaoPass, "g-tangent");
-  // mGraph.connect(genBufferPass, "g-bitangent", ssaoPass, "g-bitangent");
-  // mGraph.connect(genBufferPass, "g-position", ssaoPass, "g-position");
-  // mGraph.connect(genBufferPass, "g-depth", ssaoPass, "g-depth");
-  //
-  // mGraph.connect(ssaoPass, "g-texAO", ssaoBlurPassV, "blur-input");
-  //
-  // /* I will want something like: genBufferPass["g-albedo"] >> deferredShadingPass["g-albedo"]
-  // / or: mGraph | "passA.gAlbedo" >> "passB.color"
-  //              | "passA.gNormal" >> "passB.worldNormal"
-  // */
-  //
-  // // mGraph.setOutput(ssaoPass, "g-texAO");
-  // // mGraph.setOutput(ssaoBlurPassH, "blur-output");
-  // // mGraph.setOutput(deferredShadingPass, "final-image");
-  // mGraph.setOutput(debugLightPass, "final-image");
-
-  // mGraph.declare<TextureCube>("skybox");
   mGraph.declare<Texture2>("ao_buffer");
   mGraph.declare<const Texture2>("albedo");
 
@@ -532,28 +379,29 @@ void VoxelRenderer::defineRenderPasses() {
   mGraph.declare<RHIBuffer>("modelMatrix");
   mGraph.declare<RHIBuffer>("DebugBuffer");
   mGraph.declare<RHIBuffer>("DebugBufferCounter");
+  mGraph.declare<Texture3> ("visibilityVolume");
 
   mGraph.declare<std::vector<ChunkRenderData>>("RenderData");
 
   auto& genBufferPass = mGraph.defineNode("G-Buffer", [](RenderNodeBuilder& builder, RenderNodeContext& context) {
 
-      RenderGraphResourceDesc desc;
-      desc.type = RHIResource::Type::Texture2D;
-      desc.texture2.size = uvec2{Window::Get()->bounds().size()};
-      desc.bindingFlags = RHIResource::BindingFlag::RenderTarget | RHIResource::BindingFlag::ShaderResource;
+    RenderGraphResourceDesc desc;
+    desc.type = RHIResource::Type::Texture2D;
+    desc.texture2.size = uvec2{Window::Get()->bounds().size()};
+    desc.bindingFlags = RHIResource::BindingFlag::RenderTarget | RHIResource::BindingFlag::ShaderResource;
 
-      desc.texture2.format = TEXTURE_FORMAT_RGBA8;
-      builder.output<Texture2>("out_albedo"   , desc);
+    desc.texture2.format = TEXTURE_FORMAT_RGBA8;
+    builder.output<Texture2>("out_albedo"   , desc);
 
-      desc.texture2.format = TEXTURE_FORMAT_RGBA16;
-      builder.output<Texture2>("out_normal"   , desc);
-      builder.output<Texture2>("out_tangent"  , desc);
-      builder.output<Texture2>("out_bitangent", desc);
-      builder.output<Texture2>("out_position" , desc);
+    desc.texture2.format = TEXTURE_FORMAT_RGBA16;
+    builder.output<Texture2>("out_normal"   , desc);
+    builder.output<Texture2>("out_tangent"  , desc);
+    builder.output<Texture2>("out_bitangent", desc);
+    builder.output<Texture2>("out_position" , desc);
 
-      desc.texture2.format = TEXTURE_FORMAT_D24S8;
-      desc.bindingFlags = RHIResource::BindingFlag::DepthStencil | RHIResource::BindingFlag::ShaderResource;
-      builder.output<Texture2>("out_depth"    , desc);
+    desc.texture2.format = TEXTURE_FORMAT_D24S8;
+    desc.bindingFlags = RHIResource::BindingFlag::DepthStencil | RHIResource::BindingFlag::ShaderResource;
+    builder.output<Texture2>("out_depth"    , desc);
 
     {
       S<const Program> prog = Resource<Program>::get("Game/Shader/Voxel/GenGBuffer");
@@ -623,13 +471,13 @@ void VoxelRenderer::defineRenderPasses() {
     builder.output<Texture2>("out_ao", desc);
 
     {
-      S<const Program> prog = Resource<Program>::get("Game/Shader/Voxel/SSAO_generate");
+      S<const Program> prog = Resource<Program>::get("Game/Shader/Voxel/VoxelAO_generate");
       context.reset(prog, true);
       
       context.readCbv("frameConstant", 0);
       context.readCbv("cameraInfo",    1);
 
-      // builder.readSrv("g-albedo", mGAlbedo, 0);
+      context.readSrv("visibilityVolume", 0);
       context.readSrv(".normal",    1);
       context.readSrv(".tangent",   2);
       context.readSrv(".bitangent", 3);
@@ -637,15 +485,19 @@ void VoxelRenderer::defineRenderPasses() {
       context.readSrv(".depth",     5);
 
       context.readWriteUav(".out_ao", 0);
+      context.readWriteUav("DebugBuffer", 100);
+      context.readWriteUav("DebugBufferCounter", 101);
     }
 
     return [&](const RenderGraphResourceSet&, RHIContext& ctx) {
+
       if(Input::Get().isKeyDown('N')) return;
       auto size = Window::Get()->bounds().size();
 
       uint width = (uint)size.x;
       uint height = (uint)size.y;
-      ctx.dispatch( width / 8 + 1, height / 8 + 1, 1);
+      // ctx.dispatch( width / 8 + 1, height / 8 + 1, 1);
+      ctx.dispatch( width / 32 + 1, height / 8 + 1, 1);
     };
 
   });
@@ -722,12 +574,13 @@ void VoxelRenderer::defineRenderPasses() {
       context.readSrv(".gPosition"        , 4);
       context.readSrv(".gAO"              , 5);
       context.readSrv(".gDepth"           , 6);
-      context.readWriteUav("DebugBuffer", 100);
-      context.readWriteUav("DebugBufferCounter", 101);
+
       // context.readSrv(".lightBuffer"       , 7);
       // context.readSrv("skybox"            , 8);
 
       context.writeRtv(".out_finalImage" , 0);
+      //context.readWriteUav("DebugBuffer", 100);
+      //context.readWriteUav("DebugBufferCounter", 101);
     }
 
 
@@ -777,7 +630,7 @@ void VoxelRenderer::defineRenderPasses() {
   mGraph.setParam<RHIBuffer>(mCCamera, "cameraInfo");   
   mGraph.setParam<RHIBuffer>(mCModel, "modelMatrix");
   mGraph.setParam<std::vector<ChunkRenderData>>(&mFrameRenderData, "RenderData");
-
+  mGraph.setParam<Texture3>(mWorldVolume.visibilityVolume(), "visibilityVolume");
 }
 
 void VoxelRenderer::cleanupFrameData() {
@@ -830,4 +683,12 @@ DEF_RESOURCE(Program, "Game/Shader/Voxel/SSAO_generate") {
   return prog;
 }
 
+DEF_RESOURCE(Program, "Game/Shader/Voxel/VoxelAO_generate") {
+  Program::sptr_t prog = Program::sptr_t(new Program());
+
+  prog->stage(SHADER_TYPE_COMPUTE).setFromBinary(gVoxelTraceAO_cs, sizeof(gVoxelTraceAO_cs));
+  prog->compile();
+
+  return prog;
+}
 //http://blog.tuxedolabs.com/2018/10/17/from-screen-space-to-voxel-space.html
