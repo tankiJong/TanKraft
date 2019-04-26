@@ -2,6 +2,7 @@
 #include "Engine/Core/common.hpp"
 #include <unordered_set>
 #include "Engine/File/Path.hpp"
+#include "Engine/Async/Job.hpp"
 
 class Chunk;
 
@@ -14,6 +15,7 @@ public:
   bool load(Chunk& chunk) const;
   bool save(Chunk& chunk) const;
 
+  S<Job::Counter> loadAsync(Chunk& chunk) const;
   bool exists(std::string_view vFile) const;
 protected:
   FileCache() = default;

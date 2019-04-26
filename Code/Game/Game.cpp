@@ -10,8 +10,14 @@
 #include "Game/GameCommon.hpp"
 #include "Game/Gameplay/Entity.hpp"
 #include "Game/Gameplay/Player.hpp"
+#include "Engine/Async/Job.hpp"
+#include "Engine/Math/MathUtils.hpp"
 
+void dummy(int a, float b) {
+  DebugBreak();
+}
 void Game::onInit() {
+  
   mWorld = new World();
   mSceneRenderer = new VoxelRenderer();
   mSceneRenderer->setWorld(mWorld);
@@ -46,6 +52,7 @@ void Game::onInit() {
   mSceneRenderer->onLoad(*RHIDevice::get()->defaultRenderContext());
   Chunk::sInvalidChunk.onInit();
   //Chunk::sInvalidChunk.rebuildGpuMetaData();
+
 }
 
 void Game::onInput() {
@@ -143,8 +150,12 @@ void Game::onInput() {
 }
 
 void Game::onUpdate() {
-  float dt = (float)GetMainClock().frame.second;
+  Job::Consumer consumer;
+  Job::category_t cats[] = {Job::CAT_MAIN_THREAD};
+  consumer.init(cats);
+  consumer.consumeFor(5);
 
+  float dt = (float)GetMainClock().frame.second;
   vec3 playerPosition = mCameraController->camera().transform().position();
   mWorld->onUpdate(playerPosition);
   updateEntities();
@@ -278,6 +289,10 @@ void Game::onDestroy() {
   mWorld->onDestroy();
   SAFE_DELETE(mWorld);
   SAFE_DELETE(mSceneRenderer);
+}
+
+void Game::dummyMethod(int a) {
+  DebugBreak();
 }
 
 void Game::setCamera(eCameraMode mode, Entity* target) {

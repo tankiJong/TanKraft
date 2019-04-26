@@ -7,6 +7,7 @@
 #include "Engine/Graphics/Model/Mesher.hpp"
 #include "Engine/Math/Primitives/aabb3.hpp"
 #include "Engine/Graphics/RHI/Texture.hpp"
+#include "Engine/Async/Job.hpp"
 
 class Chunk;
 class Mesh;
@@ -16,7 +17,13 @@ struct aabb3;
 
 using BlockIndex = uint16_t;
 
-
+enum eChunkState {
+  CHUNK_STATE_INIT_READY,
+  CHUNK_STATE_LOADING,
+  CHUNK_STATE_LOADED_NO_MESH,
+  CHUNK_STATE_MESH_CONSTRUCTING,
+  CHUNK_STATE_READY,
+};
 class BlockCoords: public ivec3 {
 public:
   using ivec3::ivec3;
@@ -86,6 +93,9 @@ public:
   Chunk(ChunkCoords coords);
 
   ~Chunk();
+
+  eChunkState state() const { return mState; };
+
   enum eNeighbor: uint8_t {
     NEIGHBOR_POS_X,
     NEIGHBOR_NEG_X,
@@ -172,6 +182,8 @@ public:
   };
 
   void onInit();
+  S<Job::Counter> initAsync();
+  S<Job::Counter> generateBlockAsync();
   void afterRegisterToWorld();
   void onUpdate();
 
@@ -188,7 +200,7 @@ public:
   void setDirty() { mIsDirty = true; };
 
   bool reconstructMesh();
-
+  S<Job::Counter> reconstructMeshAsync();
   Iterator iterator();
   BlockIter blockIter(const BlockCoords& coords) { return { *this, coords }; };
   BlockIter blockIter(BlockIndex index) { return { *this, index }; };
@@ -239,6 +251,7 @@ protected:
   bool mSavePending = false;
   bool mIsDirty = true;
 
+  eChunkState mState = CHUNK_STATE_INIT_READY;
 };
 
 inline BlockIndex BlockCoords::toIndex() const {

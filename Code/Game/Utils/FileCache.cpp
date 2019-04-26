@@ -49,6 +49,11 @@ bool FileCache::save(Chunk& chunk) const {
   return true;
 }
 
+S<Job::Counter> FileCache::loadAsync(Chunk& chunk) const {
+  Job::Decl decl(this, &FileCache::load, chunk);
+  return Job::create(decl, Job::CAT_IO );
+}
+
 bool FileCache::exists(std::string_view vFile) const {
   return mExistingFiles.find(vFile.data()) != mExistingFiles.end();
 }

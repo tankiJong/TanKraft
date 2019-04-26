@@ -16,6 +16,7 @@
 #include "Engine/Debug/Log.hpp"
 #include "Engine/Math/Noise/SmoothNoise.hpp"
 #include <stdlib.h>
+#include "Game/Utils/FileCache.hpp"
 
 void World::onInit() {
 
@@ -88,18 +89,18 @@ void World::onUpdate(const vec3& viewPosition) {
   updateChunks();
   manageChunks();
 
-  static bool debug_light = false;
+  //static bool debug_light = false;
 
-  if(Input::Get().isKeyJustDown(KEYBOARD_DOWN)) {
-    debug_light = !debug_light;
-  }
-  if(debug_light) {
-    if(Input::Get().isKeyJustDown(KEYBOARD_UP)) {
-      propagateLight(true);
-    }
-  } else {
-      propagateLight(false);
-  }
+  //if(Input::Get().isKeyJustDown(KEYBOARD_DOWN)) {
+  //  debug_light = !debug_light;
+  //}
+  //if(debug_light) {
+  //  if(Input::Get().isKeyJustDown(KEYBOARD_UP)) {
+  //    propagateLight(true);
+  //  }
+  //} else {
+  //    propagateLight(false);
+  //}
 
 }
 
@@ -141,6 +142,32 @@ bool World::activateChunk(const ChunkCoords coords) {
   registerChunkToWorld(chunk);
   chunk->afterRegisterToWorld();
   return true;
+}
+
+void World::activateChunkAsync(ChunkCoords coords) {
+  Chunk* chunk = allocChunk(coords);
+  mLoadingChunks.push_back(coords);
+  S<Job::Counter> loadJob = chunk->initAsync();
+
+  Job::Decl decl([chunk, this](ChunkCoords coords) {
+    registerChunkToWorld(chunk);
+    bool found = false;
+    for(uint i = 0; i < mLoadingChunks.size(); i++) {
+      if(mLoadingChunks[i] == coords) {
+        std::swap(mLoadingChunks[i], mLoadingChunks.back());
+        mLoadingChunks.pop_back();
+        found = true;
+      }
+    }
+    ENSURES(found);
+  }, coords);
+
+  S<Job::Counter> finishJob = Job::create(decl, Job::CAT_MAIN_THREAD);
+  Job::chain(loadJob, finishJob);
+
+  Job::dispatch(loadJob);
+  Job::dispatch(finishJob);
+  // Job::dispatch({chunkInitTask, finishJob});
 }
 
 bool World::deactivateChunk(const ChunkCoords coords) {
@@ -1007,8 +1034,9 @@ void World::manageChunks() {
     ChunkCoords coords = playerChunkCoords + idx;
   
     Chunk* chunk = findChunk(coords);
-    if(chunk->invalid()) {
-      activateChunk(coords);
+    auto notLoading = std::find(mLoadingChunks.begin(), mLoadingChunks.end(), coords) == mLoadingChunks.end();
+    if(chunk->invalid() &&  notLoading) {
+      activateChunkAsync(coords);
       activatedChunkCount++;
     }
   
@@ -1021,10 +1049,9 @@ void World::manageChunks() {
     ChunkCoords coords = playerChunkCoords + idx;
 
     Chunk* chunk = findChunk(coords);
-    if(chunk->valid() && chunk->isDirty()) {
-      if(chunk->reconstructMesh()) {
-        reconstructedMeshCount++;
-      }
+    if(chunk->valid() && chunk->state() == CHUNK_STATE_LOADED_NO_MESH) {
+      chunk->reconstructMeshAsync();
+      reconstructedMeshCount++;
     }
 
     if(reconstructedMeshCount == Config::kMaxChunkReconstructMeshPerFrame) break;

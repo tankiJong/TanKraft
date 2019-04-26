@@ -6,6 +6,7 @@
 #include "Game/Gameplay/FollowCamera.hpp"
 #include "Engine/Memory/RingBuffer.hpp"
 #include "Game/Gameplay/Collision.hpp"
+#include "Engine/Async/Job.hpp"
 
 class Chunk;
 class VoxelRenderer;
@@ -45,6 +46,7 @@ public:
   void onDestroy();
 
   bool activateChunk(ChunkCoords coords);
+  void activateChunkAsync(ChunkCoords coords);
   bool deactivateChunk(ChunkCoords coords);
 
   Chunk* findChunk(const ChunkCoords& coords) const;
@@ -65,7 +67,6 @@ public:
   bool collide(span<CollisionSphere> target) const;
 
 protected:
-
   Chunk* allocChunk(ChunkCoords coords) { return new Chunk(coords); }
   void freeChunk(Chunk* chunk) { delete chunk; } 
   void registerChunkToWorld(Chunk* chunk);
@@ -79,7 +80,7 @@ protected:
 
   vec3 mCurrentViewPosition;
   std::unordered_map<ChunkCoords, Chunk*> mActiveChunks;
-
+  std::vector<ChunkCoords> mLoadingChunks;
   std::deque<Chunk::BlockIter> mLightDirtyList;
   mutable std::vector<aabb3> mDebugRayCubes;
   RingBuffer mWeatherNoiseSample;

@@ -24,6 +24,7 @@
 #include "Game/World/World.hpp"
 #include "Game/Utils/FileCache.hpp"
 #include "Game/Game.hpp"
+#include "Engine/Async/Job.hpp"
 
 #define SCENE_BUNNY
 // #define SCENE_1
@@ -74,7 +75,7 @@ void GameApplication::onInit() {
   SAFE_DELETE(gGameClock);
   gGameClock = GetMainClock().createChild();
 
-
+  Job::startup(Job::NUM_CATEGORY);
   // mCamera = new Camera();
   // mCamera->setCoordinateTransform(gGameCoordsTransform);
   // // mCamera->transfrom().setCoordinateTransform(gGameCoordsTransform);
@@ -172,6 +173,7 @@ void GameApplication::onEndFrame() {
 }
 
 void GameApplication::onDestroy() {
+  Job::shutdown();
   mGame.onDestroy();
   mDevice->cleanup();
 }
@@ -232,7 +234,7 @@ void GameApplication::renderStatisticsOverlay() const {
 //-----------------------------------------------------------------------------------------------
 int __stdcall WinMain(HINSTANCE, HINSTANCE, LPSTR /*commandLineString*/, int) {
   GameApplication app;
-
+  CurrentThread::setName("Main Thread");
   while (app.runFrame());
 
   return 0;

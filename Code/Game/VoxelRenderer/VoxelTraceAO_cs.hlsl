@@ -17,6 +17,7 @@ Texture2D<float4> gTexPosition:   register(t4);
 Texture2D<float4> gTexDepth:   register(t5);
 
 RWTexture2D<float4> uTexAO: register(u0); 
+static uint seed;
 
 #define BD_X 16
 #define BD_Y 16
@@ -27,7 +28,6 @@ RWTexture2D<float4> uTexAO: register(u0);
 static const uint2 kPlayerTileIndex = 16u.xx >> 1;
 static const uint3 kPlayerChunk00Block = uint3(16u.xx * kPlayerTileIndex, 0);
 static uint3 kPixCoords;
-static uint seed;
 
 static float3 kVolumeAnchorPositionW;
 
@@ -191,81 +191,9 @@ bool isOpaque(uint3 coords, uint mip) {
 	return val != 0;
 }
 
-static bool debuggg = true;
-int3 stepVolume(inout VRay ray, uint currentMip) {
-	int3 step = sign(ray.direction);
-	
-	float3 maxt = maxT(ray.origin, ray.direction, currentMip);
-
-	float3 deltat = deltaT(ray.direction, currentMip);
-
-
-	int3 volumeCoords = toVolumeCoords(ray.origin, currentMip);
-	while( true ) {
-	if(debuggg) {
-		DebugDrawVoxel(volumeCoords, currentMip, float4(0, 1, 0, .5));
-	}
-
-		if(maxt.x <= maxt.y && maxt.x <= maxt.z) {
-			volumeCoords.x += step.x;
-		} else if(maxt.y <= maxt.x && maxt.y <= maxt.z) {
-			volumeCoords.y += step.y;
-		} else {
-			volumeCoords.z += step.z;
-		}
-
-		if(!inRange(volumeCoords, currentMip)) break;
-
-		if(isOpaque(volumeCoords, currentMip)) break;
-
-		if(maxt.x <= maxt.y && maxt.x <= maxt.z) {
-			maxt.x += deltat.x;
-		} else if(maxt.y <= maxt.x && maxt.y <= maxt.z) {
-			maxt.y += deltat.y;
-		} else {
-			maxt.z += deltat.z;
-		}
-	}
-
-	float t = min(maxt.x, min(maxt.y, maxt.z));
-	if(debuggg){
-		float3 world = toWorldPosition(ray.origin);
-		DebugDrawLine(world, world + t * ray.direction);
-	}
-	ray.origin = ray.origin + ray.direction * t;
-
-	return volumeCoords;
-	// debuggg = false;
-}
-
 // assume I am in the volume, trace it.
 // asume in volume space, which means voxel(0,0,0) right, bottom, backward corner is (0,0,0)
 VContact trace(VRay ray) {
-	// {
-	// 	float3 world = toWorldPosition(ray.origin);
-	// 	DebugDrawLine(world, world + 10 * ray.direction);
-	// }
-	// uint currentMip = 8;
-	// int3 volCoords = toVolumeCoords(ray.origin, currentMip); 
-	// float3 world = toWorldPosition(ray.origin);
-	// while(currentMip <= 8 && currentMip > 0) {
-	// 	if(!inRange(volCoords, currentMip)) return miss();
-	// 	DebugDrawVoxel(volCoords, currentMip);
-	// 	{
-	// 		DebugDrawLine(world, toWorldPosition(ray.origin));
-	// 		DebugDrawPoint(toWorldPosition(ray.origin), float4(1.f, 0.f, 0.f, 1.f));
-	// 		world = toWorldPosition(ray.origin);
-	// 	}
-	// 	if(!isOpaque(volCoords, currentMip)) {
-	// 		volCoords = stepVolume(ray, currentMip);
-	// 		float3 volOffset = ray.origin - volCoords * voxelSize(currentMip);
-	// 		int3 offsetCoords = toVolumeCoords(volOffset, currentMip-1);
-	// 		volCoords = volCoords * 2 + offsetCoords;	
-	// 	}
-	// 	currentMip--;
-	// }
-
-
 	int3 step = sign(ray.direction);
 	
 	float3 maxt = maxT(ray.origin, ray.direction, 0);
@@ -337,15 +265,6 @@ VContact trace(VRay ray) {
 }
 
 
- 
-
-float3 GetCameraPosition() {
-	float4x4 inverView = inverse(view);
-	float4 world = mul(inverView, float4(0.f.xxx, 1.f));
-	return world.xyz / world.w;
-}
-
-
 float origin() { return 1.0f / 32.0f; }
 float float_scale() { return 1.0f / 65536.0f; } 
 float int_scale()   { return 256.0f; } 
@@ -357,6 +276,15 @@ float3 offset_ray(float3 p, float3 n) {
 	return float3(abs(p.x) < origin() ? p.x+ float_scale()*n.x : p_i.x,
 							  abs(p.y) < origin() ? p.y+ float_scale()*n.y : p_i.y,
 								abs(p.z) < origin() ? p.z+ float_scale()*n.z : p_i.z);
+}
+
+
+ 
+
+float3 GetCameraPosition() {
+	float4x4 inverView = inverse(view);
+	float4 world = mul(inverView, float4(0.f.xxx, 1.f));
+	return world.xyz / world.w;
 }
 
 
@@ -413,7 +341,7 @@ void main( uint3 pixelCoords : SV_DispatchThreadID )
 	
 
 	float ao = 0;
-	for(uint i = 0; i < 8; i++) {
+	for(uint i = 0; i < 1; i++) {
 		VRay ray;
 		ray.origin = toVolumePosition(posW);
 		if(any(ray.origin >= 255.f) || any(ray.origin < 0.f)){
@@ -442,7 +370,7 @@ void main( uint3 pixelCoords : SV_DispatchThreadID )
 		ao += c.contact.valid() ? 1.f : 0.f;
 	}
 
-	ao = 1.f - ao / 8.f;
+	ao = 1.f - ao / 1.f;
 	uTexAO[pixelCoords.xy] = float4(ao.xxx, 1.f);
 
 	

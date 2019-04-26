@@ -356,6 +356,37 @@ void Chunk::onInit() {
 
 }
 
+S<Job::Counter> Chunk::initAsync() {
+  mState = CHUNK_STATE_LOADING;
+  FileCache& cache = FileCache::get();
+
+  S<Job::Counter> dummyJob = Job::create({[] {
+  }}, Job::CAT_GENERIC);
+
+  S<Job::Counter> loadJob = Job::create({[this, dummyJob] {
+    FileCache& cache = FileCache::get();
+    bool result = cache.load(*this);
+    if(!result) {
+      S<Job::Counter> counter = generateBlockAsync();
+      Job::chain(counter, dummyJob);
+      Job::dispatch(counter);
+    } else {
+      mState = CHUNK_STATE_LOADED_NO_MESH;
+    }
+  }}, Job::CAT_IO);
+
+  Job::chain(loadJob, dummyJob);
+  Job::dispatch(loadJob);
+  return dummyJob;
+}
+
+S<Job::Counter> Chunk::generateBlockAsync() {
+  mIsDirty = true;
+  Job::Decl decl(this, &Chunk::generateBlocks);
+  S<Job::Counter> generateBlockJob = Job::create(decl, Job::CAT_GENERIC);
+  return generateBlockJob;
+}
+
 void Chunk::afterRegisterToWorld() {
   initLights();
 }
@@ -667,6 +698,8 @@ void Chunk::generateBlocks() {
       }
     }
   }
+
+  mState = CHUNK_STATE_LOADED_NO_MESH;
 }
 
 void Chunk::initLights() {
@@ -845,6 +878,50 @@ bool Chunk::reconstructMesh() {
   mIsDirty = false;
 
   return true;
+}
+
+S<Job::Counter> Chunk::reconstructMeshAsync() {
+  if(!neighborsLoaded()) return nullptr;
+  mState = CHUNK_STATE_MESH_CONSTRUCTING;
+  Job::Decl constructCPUMesh([this] {
+    EXPECTS(mIsDirty);
+    SAFE_DELETE(mMesh);
+    
+    mMesher.reserve(kSizeX * kSizeY * 3);
+    mMesher.clear();
+    mMesher.setWindingOrder(WIND_CLOCKWISE);
+    mMesher.begin(DRAW_TRIANGES);
+
+
+    constexpr BlockIndex kWorldSeaLevel = 100;
+    constexpr int kChangeRange = (int(kSizeZ) - int(kWorldSeaLevel)) / 2;
+
+    for(int k = 0; k < kSizeZ; k++) {
+      for(int j = 0; j < kSizeY; j++) {
+        for(int i = 0; i < kSizeX; i++) {
+
+          BlockCoords coords1{i, j, k};
+          vec3 worldPosition1 = vec3(coords1) + mCoords.pivotPosition();
+
+          BlockIter iter1 = blockIter(coords1);
+          addBlock(iter1, worldPosition1);
+        }
+      }
+    }
+    mMesher.end();
+
+    S<Job::Counter> gpuMeshJob = Job::create({[this] {
+      mMesh = mMesher.createMesh<vertex_lit_t>();
+      rebuildGpuMetaData();
+      mState = CHUNK_STATE_READY;
+      mIsDirty = false;
+    }}, Job::CAT_MAIN_THREAD);
+    Job::dispatch(gpuMeshJob);
+  });
+  S<Job::Counter> cpuMeshJob = Job::create(constructCPUMesh, Job::CAT_GENERIC_SLOW);
+
+  Job::dispatch(cpuMeshJob);
+  return cpuMeshJob;
 }
 
 Chunk::Iterator Chunk::iterator() {
