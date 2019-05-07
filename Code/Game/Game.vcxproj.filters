@@ -98,5 +98,6 @@
     <FxCompile Include="World\GenVolumeMipmap_Detail_cs.hlsl" />
     <FxCompile Include="World\GenVolumeMipmap_Rough_cs.hlsl" />
     <FxCompile Include="VoxelRenderer\VoxelTraceAO_cs.hlsl" />
+    <FxCompile Include="VoxelRenderer\VoxelSunlight_cs.hlsl" />
   </ItemGroup>
 </Project>

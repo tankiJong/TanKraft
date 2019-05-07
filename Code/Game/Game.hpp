@@ -18,7 +18,7 @@ public:
   void onRender() const;
   void postUpdate();
   void onDestroy();
-  void dummyMethod(int);
+  void dummyMethod(int, float);
   const World* world() const { return mWorld; }
 
   raycast_result_t playerRaycastResult() const { return mPlayerRaycast; }

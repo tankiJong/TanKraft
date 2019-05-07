@@ -910,15 +910,16 @@ S<Job::Counter> Chunk::reconstructMeshAsync() {
     }
     mMesher.end();
 
-    S<Job::Counter> gpuMeshJob = Job::create({[this] {
+    S<Job::Counter> gpuMeshJob = Job::create([this] {
       mMesh = mMesher.createMesh<vertex_lit_t>();
       rebuildGpuMetaData();
       mState = CHUNK_STATE_READY;
       mIsDirty = false;
-    }}, Job::CAT_MAIN_THREAD);
+    }, Job::CAT_MAIN_THREAD);
     Job::dispatch(gpuMeshJob);
   });
   S<Job::Counter> cpuMeshJob = Job::create(constructCPUMesh, Job::CAT_GENERIC_SLOW);
+  constexpr size_t s = sizeof(constructCPUMesh);
 
   Job::dispatch(cpuMeshJob);
   return cpuMeshJob;

@@ -76,34 +76,11 @@ void GameApplication::onInit() {
   gGameClock = GetMainClock().createChild();
 
   Job::startup(Job::NUM_CATEGORY);
-  // mCamera = new Camera();
-  // mCamera->setCoordinateTransform(gGameCoordsTransform);
-  // // mCamera->transfrom().setCoordinateTransform(gGameCoordsTransform);
-  // mCamera->transfrom().localPosition() = vec3{0,0,0};
-  // mCamera->transfrom().localRotation() = vec3{0,0,0};
-  //
-  // // TODO: look at is buggy
-  // // mCamera->lookAt({ -3, -3, 3 }, { 0, 0, 0 }, {0, 0, 1});
-  // mCamera->setProjectionPrespective(19.5, 3.f*CLIENT_ASPECT, 3.f, 0.100000f, 1500.000000f);
 
   mDevice = RHIDevice::get();
   mContext = mDevice->defaultRenderContext();
 
-  // uint w = (uint)Window::Get()->bounds().width();
-  // uint h = (uint)Window::Get()->bounds().height();
-
-  // cameraController = new CameraController(*mCamera);
-  // cameraController->speedScale(10);
-
-  
-  // Debug::setDepth(Debug::DEBUG_DEPTH_ENABLE);
-  // mBvh->render();
-
-  // sceneRenderer->setCamera(*mCamera);
-
-
   FileCache::get().init();
-
 
   Input::Get().mouseLockCursor(true);
   // Input::Get().mouseHideCursor(false);
@@ -131,31 +108,7 @@ void GameApplication::onInput() {
                                   float(frameAvgSec * 1000.0)).c_str());
 
   mGame.onUpdate();
-  // cameraController->onInput();
-  // cameraController->onUpdate(dt);
-  // vec2 rotation = vec2::zero;
-  // if (Input::Get().isKeyDown(MOUSE_RBUTTON)) {
-  //   rotation = Input::Get().mouseDeltaPosition(true) * 180.f * dt;
-  // }
-  //
-  // static float intensity = 5.f;
-  // static vec3 color = vec3::one;
-  // {
-  //   // ImGui::Begin("Light Control");
-  //   // ImGui::SliderFloat("Light Intensity", &intensity, 0, 100);
-  //   // ImGui::SliderFloat3("Light color", (float*)&color, 0, 1);
-  //   // ImGui::End();
-  //   float scale = cameraController->speedScale();
-  //   vec3 camPosition = mCamera->transfrom().position();
-  //   vec3 camRotation = mCamera->transfrom().rotation();
-  //   ImGui::Begin("Camera Control");
-  //   ImGui::SliderFloat("Camera speed", &scale, 0, 20);
-  //   ImGui::SliderFloat3("Camera Position", (float*)&camPosition, 0, 10);
-  //   ImGui::SliderFloat3("Camera Rotation", (float*)&mCamera->transfrom().localRotation(), -360, 360);
-  //   ImGui::End();
-  //   cameraController->speedScale(scale);
-  // }
-  
+
 }
 
 void GameApplication::onRender() const {
@@ -173,7 +126,6 @@ void GameApplication::onEndFrame() {
 }
 
 void GameApplication::onDestroy() {
-  Job::shutdown();
   mGame.onDestroy();
   mDevice->cleanup();
 }

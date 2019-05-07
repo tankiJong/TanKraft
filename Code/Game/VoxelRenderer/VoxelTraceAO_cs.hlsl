@@ -14,7 +14,7 @@ Texture2D<float4> gTexNormal:   register(t1);
 Texture2D<float4> gTexTangent:   register(t2);
 Texture2D<float4> gTexBitangent:   register(t3);
 Texture2D<float4> gTexPosition:   register(t4);
-Texture2D<float4> gTexDepth:   register(t5);
+Texture2D<float> gTexDepth:   register(t5);
 
 RWTexture2D<float4> uTexAO: register(u0); 
 static uint seed;
@@ -294,7 +294,7 @@ float3 GetCameraPosition() {
 [numthreads(32, 8, 1)]
 void main( uint3 pixelCoords : SV_DispatchThreadID )
 {
-	enableDebug = (pixelCoords.x == (1620 >> 1) && pixelCoords.y == (972 >> 1));
+	// enableDebug = (pixelCoords.x == (1620 >> 1) && pixelCoords.y == (972 >> 1));
 	// seed = pixelCoords.x * 0xefcca + 0xff884 * pixelCoords.y + 0xab66f * pixelCoords.z;
 	seed = pixelCoords.x * 901003 + 121143 * pixelCoords.y + 179931 * pixelCoords.z;
 	kPixCoords = pixelCoords;
@@ -341,7 +341,7 @@ void main( uint3 pixelCoords : SV_DispatchThreadID )
 	
 
 	float ao = 0;
-	for(uint i = 0; i < 1; i++) {
+	for(uint i = 0; i < 8; i++) {
 		VRay ray;
 		ray.origin = toVolumePosition(posW);
 		if(any(ray.origin >= 255.f) || any(ray.origin < 0.f)){
@@ -370,7 +370,7 @@ void main( uint3 pixelCoords : SV_DispatchThreadID )
 		ao += c.contact.valid() ? 1.f : 0.f;
 	}
 
-	ao = 1.f - ao / 1.f;
+	ao = 1.f - ao / 8.f;
 	uTexAO[pixelCoords.xy] = float4(ao.xxx, 1.f);
 
 	

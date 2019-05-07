@@ -6,18 +6,100 @@
 #include "Engine/Debug/Profile/Overlay.hpp"
 #include "Game/World/World.hpp"
 #include "Game/VoxelRenderer/VoxelRenderer.hpp"
-#include "Game/Utils/Config.hpp"
-#include "Game/GameCommon.hpp"
 #include "Game/Gameplay/Entity.hpp"
 #include "Game/Gameplay/Player.hpp"
 #include "Engine/Async/Job.hpp"
 #include "Engine/Math/MathUtils.hpp"
+#include "Engine/Core/vary.hpp"
+#include "Engine/Event/EventEmitter.hpp"
+#include "Engine/Core/any_func.hpp"
 
+struct NameProperty {
+  
+};
 void dummy(int a, float b) {
   DebugBreak();
 }
+
 void Game::onInit() {
-  
+
+  // `vary` is like std::any, but cannot perform casting inside the class
+  // it is with runtime check for `get()`, can be compiled out
+  int integer = 1;
+  float fp = 2.f;
+  char c = 'Y';
+  vary v1;
+  v1.set(integer);
+  vary v2;
+  v1.set(v2);
+  v1.set(2.f);
+  v1.set(c);
+
+  c << v1;
+  c = v1.get<char>();
+
+  // a callable container which can store function of any type, 
+  // the only limitation is you cannot store lambda with too big sizeof(capture)
+  any_func func1(&dummy);
+  any_func func2([](int a, char b) {});
+  any_func func3([this](int a) {
+    dummyMethod(1, 3.f);
+  });
+  any_func func4(this, &Game::dummyMethod);
+
+  EventEmitter emitter;
+  emitter.on("hello", &dummy);
+  emitter.on("hello", this, &Game::dummyMethod);
+  emitter.on("hello", [this](int a, float b) {
+    DebugBreak();
+  });
+
+  //emitter.emit("hello", 1, 6.f);
+
+  emitter.off("hello", this, &Game::dummyMethod);
+
+  VaryMap kvs;
+
+
+  emitter.on("vmaptest", [](VaryMap& kvs) {
+    kvs.set("int", 2);
+  });
+
+  emitter.on("vmaptest", [](VaryMap& kvs) {
+    kvs.set("mat44", mat44::identity);
+  });
+
+  emitter.on("vmaptest", [](VaryMap& kvs) {
+    int xxx;
+    kvs.get("int", xxx);
+    mat44 mat = kvs.get<mat44>("mat44");
+  });
+
+  emitter.emit("vmaptest", kvs);
+  //emitter.emit("hello", 2, 3.f);
+
+  // provide runtime check for operator(), which can be compiled out
+  //func1(1, 2.f);
+  //func2(1, '2');
+  //func3(1);
+  //func4(3, 2.f);
+
+  // `any_func` with cached params, 
+  // the params has to be copy constructable, since my usage of this type has to cache off the context
+  closure cl1(&dummy, 1, 2.f);
+  closure cl2(this, &Game::dummyMethod, 3, 2.f);
+  closure cl3([]() {
+    DebugBreak();
+  });
+  //cl1();
+  //cl2();
+
+  // They can all be packed into array!
+  std::vector<vary> anyThing;
+  std::vector<any_func> anyFunctions;
+  std::vector<closure> anyClosures;
+
+  auto a = [] {};
   mWorld = new World();
   mSceneRenderer = new VoxelRenderer();
   mSceneRenderer->setWorld(mWorld);
@@ -31,7 +113,6 @@ void Game::onInit() {
 
   player->physicsMode(Entity::PHY_GHOST);
   mSpectator->physicsMode(Entity::PHY_GHOST);
-
   mCameraController->possessTarget(mPossessPlayer ? mPlayer : mSpectator);
   mCameraController->camera().transform().localPosition() = {.0f, .0f, 1.65f - .5f};
   {
@@ -291,7 +372,7 @@ void Game::onDestroy() {
   SAFE_DELETE(mSceneRenderer);
 }
 
-void Game::dummyMethod(int a) {
+void Game::dummyMethod(int a, float b) {
   DebugBreak();
 }
 

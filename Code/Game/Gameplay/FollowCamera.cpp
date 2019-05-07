@@ -27,7 +27,7 @@ FollowCamera::FollowCamera(Entity* target, eCameraMode mode)
 
   mCamera->setCoordinateTransform(gGameCoordsTransform);
   mCamera->transform().setRotationOrder(ROTATION_YZX);
-  mCamera->setProjectionPrespective(70, 3.f*CLIENT_ASPECT, 3.f, 0.100000f, Config::kMaxActivateDistance);
+  mCamera->setProjectionPrespective(70, 3.f*CLIENT_ASPECT, 3.f, .9f, Config::kMaxActivateDistance);
 }
 
 void FollowCamera::possessTarget(Entity* target) {

@@ -29,6 +29,7 @@
 #include "VoxelRenderer/GenGBuffer_vs.h"
 #include "VoxelRenderer/SSAO_cs.h"
 #include "VoxelRenderer/VoxelTraceAO_cs.h"
+#include "VoxelRenderer/VoxelSunlight_cs.h"
 
 // DFS TODO: add ConstBuffer class66
 
@@ -357,7 +358,9 @@ void VoxelRenderer::updateFrameConstant(RHIContext&) {
   mFrameData.gRayleigh = gRayleigh * scaleRayleigh;
   mFrameData.gMie = gMie * scaleMie;
   // mFrameData.gTime = .28 * 86400.f;
-  mFrameData.gSunDir = vec3(0, sinf(dayaPrecent * 2 * PI - .5f * PI), cosf(dayaPrecent * 2 * PI - .5f * PI));
+  
+  mFrameData.gSunDir = vec3(0, sinf(dayaPrecent * 2 * PI - .5f * PI), cosf(dayaPrecent * 2 * PI - .5f * PI)).normalized();
+  mFrameData.gSunDir = (mat44::rotationZ(45.f) * vec4(mFrameData.gSunDir, 1.f)).xyz();
   mCFrameData->updateData(mFrameData);
 
   // mGDepth = RHIDevice::get()->depthBuffer();
@@ -399,7 +402,7 @@ void VoxelRenderer::defineRenderPasses() {
     builder.output<Texture2>("out_bitangent", desc);
     builder.output<Texture2>("out_position" , desc);
 
-    desc.texture2.format = TEXTURE_FORMAT_D24S8;
+    desc.texture2.format = TEXTURE_FORMAT_D32;
     desc.bindingFlags = RHIResource::BindingFlag::DepthStencil | RHIResource::BindingFlag::ShaderResource;
     builder.output<Texture2>("out_depth"    , desc);
 
@@ -502,6 +505,54 @@ void VoxelRenderer::defineRenderPasses() {
 
   });
 
+  auto& sunPass = mGraph.defineNode("sunlight", 
+    [](RenderNodeBuilder& builder, RenderNodeContext& context) {
+    
+    builder.input<Texture2> ("normal"   );
+    builder.input<Texture2> ("tangent"  );
+    builder.input<Texture2> ("bitangent");
+    builder.input<Texture2> ("position" );
+    builder.input<Texture2> ("depth"    );
+
+    RenderGraphResourceDesc desc;
+    desc.type = RHIResource::Type::Texture2D;
+    desc.texture2.format = TEXTURE_FORMAT_RGBA8;
+    desc.texture2.size = uvec2{Window::Get()->bounds().size()};
+    desc.bindingFlags = RHIResource::BindingFlag::UnorderedAccess | RHIResource::BindingFlag::ShaderResource;
+    builder.output<Texture2>("out_sunlight", desc);
+
+    {
+      S<const Program> prog = Resource<Program>::get("Game/Shader/Voxel/VoxelSunlight");
+      context.reset(prog, true);
+      
+      context.readCbv("frameConstant", 0);
+      context.readCbv("cameraInfo",    1);
+
+      context.readSrv("visibilityVolume", 0);
+      context.readSrv(".normal",    1);
+      context.readSrv(".tangent",   2);
+      context.readSrv(".bitangent", 3);
+      context.readSrv(".position",  4);
+      context.readSrv(".depth",     5);
+
+      context.readWriteUav(".out_sunlight", 0);
+      context.readWriteUav("DebugBuffer", 100);
+      context.readWriteUav("DebugBufferCounter", 101);
+    }
+
+    return [&](const RenderGraphResourceSet&, RHIContext& ctx) {
+
+      if(Input::Get().isKeyDown('N')) return;
+      auto size = Window::Get()->bounds().size();
+
+      uint width = (uint)size.x;
+      uint height = (uint)size.y;
+      // ctx.dispatch( width / 8 + 1, height / 8 + 1, 1);
+      ctx.dispatch( width / 32 + 1, height / 8 + 1, 1);
+    };
+
+  });
+
   auto& blurpass = mGraph.defineNode("Blur", 
   [](RenderNodeBuilder& builder, RenderNodeContext& context) {  
 
@@ -550,6 +601,7 @@ void VoxelRenderer::defineRenderPasses() {
     builder.input<Texture2>("gPosition" );
     builder.input<Texture2>("gAO"       );
     builder.input<Texture2>("gDepth"    );
+    builder.input<Texture2>("gSun"       );
     // builder.input("skybox"        RHIResource::Type::TextureCube);
     // builder.input<RHIBuffer>("lightBuffer");
 
@@ -574,6 +626,7 @@ void VoxelRenderer::defineRenderPasses() {
       context.readSrv(".gPosition"        , 4);
       context.readSrv(".gAO"              , 5);
       context.readSrv(".gDepth"           , 6);
+      context.readSrv(".gSun"              , 7);
 
       // context.readSrv(".lightBuffer"       , 7);
       // context.readSrv("skybox"            , 8);
@@ -605,6 +658,12 @@ void VoxelRenderer::defineRenderPasses() {
   mGraph.connect(ssaoPass,      "out_ao",       ssaoBlurPassV, "target");
   mGraph.connect(ssaoBlurPassV, "target",   ssaoBlurPassH, "target");
 
+  mGraph.connect(genBufferPass, "out_normal",   sunPass, "normal");
+  mGraph.connect(genBufferPass, "out_tangent",  sunPass, "tangent");
+  mGraph.connect(genBufferPass, "out_bitangent",sunPass, "bitangent");
+  mGraph.connect(genBufferPass, "out_position", sunPass, "position");
+  mGraph.connect(genBufferPass, "out_depth",    sunPass, "depth");
+
   mGraph.connect(genBufferPass, "out_albedo",   deferredShadingPass, "gAlbedo");
   mGraph.connect(genBufferPass, "out_normal",   deferredShadingPass, "gNormal");
   mGraph.connect(genBufferPass, "out_tangent",  deferredShadingPass, "gTangent");
@@ -612,6 +671,7 @@ void VoxelRenderer::defineRenderPasses() {
   mGraph.connect(genBufferPass, "out_position", deferredShadingPass, "gPosition");
   mGraph.connect(genBufferPass, "out_depth",    deferredShadingPass, "gDepth");
   mGraph.connect(ssaoBlurPassH, "target",   deferredShadingPass, "gAO");
+  mGraph.connect(sunPass, "out_sunlight",   deferredShadingPass, "gSun");
   // mGraph.connect(genBufferPass, "out_depth",    deferredShadingPass, "lightBuffer");
   
   mGraph.bind("ssao-generate.out_ao", "ao_buffer");
@@ -692,3 +752,12 @@ DEF_RESOURCE(Program, "Game/Shader/Voxel/VoxelAO_generate") {
   return prog;
 }
 //http://blog.tuxedolabs.com/2018/10/17/from-screen-space-to-voxel-space.html
+
+DEF_RESOURCE(Program, "Game/Shader/Voxel/VoxelSunlight") {
+  Program::sptr_t prog = Program::sptr_t(new Program());
+
+  prog->stage(SHADER_TYPE_COMPUTE).setFromBinary(gVoxelSunlight_cs, sizeof(gVoxelSunlight_cs));
+  prog->compile();
+
+  return prog;
+}

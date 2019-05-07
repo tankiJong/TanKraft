@@ -157,7 +157,14 @@ float3 get_incident_light(_in(ray_t) ray, float end)
 	float march_step = end / float(num_samples);
 
 	// cosine of angle between view and light directions
-	float mu = dot(ray.direction, sun_dir);
+	float3x3 flipAxis = {
+		    0, -1, 0,
+		    0,  0, 1,
+		    1,  0, 0
+	};
+
+	float3 sunDir = mul(flipAxis, sun_dir);
+	float mu = dot(ray.direction, sunDir);
 
 	// Rayleigh and Mie phase functions
 	// A black box indicating how light is interacting with the material
@@ -199,7 +206,15 @@ float3 get_incident_light(_in(ray_t) ray, float end)
 		// gather the sunlight
 		ray_t light_ray;
 		light_ray.origin = s;
-		light_ray.direction = sun_dir;
+
+		float3x3 flipAxis = {
+		    0, -1, 0,
+		    0,  0, 1,
+		    1,  0, 0
+		};
+
+		float3 sunDir = mul(flipAxis, sun_dir);
+		light_ray.direction = sunDir;
 
 		float optical_depth_lightR = 0.;
 		float optical_depth_lightM = 0.;
@@ -322,11 +337,7 @@ PSOutput main(PostProcessingVSOutput input)
 	}
 	// R = mul(flipAxis, R);
 	// direction = mul(flipAxis, direction);
-	float3x3 flipAxis = {
-		    0, -1, 0,
-		    0,  0, 1,
-		    1,  0, 0
-	};
+
 	float factor = length(normal) < 0.5f ? 0 : 1;
 	float3 sampleDirection = clamp(normalize(direction), -1.f.xxx, 1.f.xxx);
 	float3 samplePosition = position * factor + camPosition.xyz * (1 - factor);
@@ -352,9 +363,6 @@ PSOutput main(PostProcessingVSOutput input)
 	float3 bitan = normalize(cross(tan, normal));
 	// output.color = gTexTangent.Sample(gSampler, input.tex);
 	// return output;
-
-	uint total,_;
-	gLights.GetDimensions(total, _);
 
 
 	// float3 eye = normalize(camPosition.xyz - position);
@@ -382,7 +390,8 @@ PSOutput main(PostProcessingVSOutput input)
 	finalColor += color.xyz * ao;
 	// ao = clamp(0, 1, ao + lerp(.5f, 0.f, ambientStrength));
 
-	finalColor = saturate(finalColor);
+	float sun = gSun.Sample(gSampler, input.tex).x > .5f ? 1.f : .1f;
+	finalColor = saturate(finalColor) * sun * dot(normal, gSunDir) * 2;
 
 	// output.color = 1.f.xxxx - isnan(skyScatter);
 	// return output;
@@ -398,6 +407,6 @@ PSOutput main(PostProcessingVSOutput input)
 
 	output.color = float4( finalColor, 1 )  * factor
 	 								+ skyScatter * (1 - factor);
-	output.color = float4(ao.xxx, 1.f);
+  // output.color = float4(gTexDepth.Sample(gSampler, input.tex).xxx, 1.f);
 	return output;
 }

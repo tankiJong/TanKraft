@@ -197,7 +197,7 @@ public:
   Block& block(BlockIndex index) { return mBlocks[index]; }
 
   bool isDirty() const { return mIsDirty; }
-  void setDirty() { mIsDirty = true; };
+  void setDirty() { mIsDirty = true; mState = CHUNK_STATE_LOADED_NO_MESH; };
 
   bool reconstructMesh();
   S<Job::Counter> reconstructMeshAsync();

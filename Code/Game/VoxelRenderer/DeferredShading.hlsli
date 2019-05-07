@@ -19,9 +19,8 @@ Texture2D<float4> gTexTangent:   register(t2);
 Texture2D<float4> gTexBitangent:   register(t3);
 Texture2D<float4> gTexPosition:   register(t4);
 Texture2D<float4> gTexAO:   register(t5);
-Texture2D<float4> gTexDepth:   register(t6);
-StructuredBuffer<light_info_t> gLights: register(t7);
-// TextureCube<float4> gSky: register(t8);
+Texture2D<float> gTexDepth:   register(t6);
+Texture2D<float4> gSun: register(t7);
 // Texture2D gTexSpecular: register(t2);
 
 #define DeferredShading_RootSig \
